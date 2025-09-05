@@ -1,8 +1,3 @@
-"""
-Model Evaluator for Astronomical Object Classification
-Comprehensive evaluation metrics and visualization tools.
-"""
-
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt

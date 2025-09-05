@@ -1,8 +1,3 @@
-"""
-Enhanced Visualization Module for Astronomical Object Classification
-Provides comprehensive plotting and visualization tools with modern features and improved functionality.
-"""
-
 import numpy as np
 from umap import UMAP
 import pandas as pd

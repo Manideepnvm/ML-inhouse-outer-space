@@ -1,8 +1,3 @@
-"""
-Fixed Demo Script for Astronomical Object Classification Project
-Tests the basic functionality of the project components.
-"""
-
 import os
 import sys
 import warnings

@@ -1,8 +1,3 @@
-"""
-Deep Learning Models for Astronomical Object Classification
-Implements neural networks using TensorFlow/Keras for astronomical data.
-"""
-
 import numpy as np
 import pandas as pd
 import warnings
@@ -25,7 +20,6 @@ try:
     
 except ImportError:
     TENSORFLOW_AVAILABLE = False
-    print("⚠️ TensorFlow not available. Deep learning models will be skipped.")
 
 # PyTorch imports with error handling
 try:

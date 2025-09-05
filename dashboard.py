@@ -240,7 +240,7 @@ def main():
     st.sidebar.markdown("🔵 Galaxies (Blue)")  
     st.sidebar.markdown("🔴 Quasars (Red)")
     st.sidebar.divider()
-    st.sidebar.markdown("Run locally: `streamlit run dashboard.py`")
+    st.sidebar.markdown("Run locally: `python -m streamlit run dashboard.py`")
 
 
 if __name__ == "__main__":

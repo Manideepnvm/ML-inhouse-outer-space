@@ -1,8 +1,3 @@
-"""
-Traditional Machine Learning Models for Astronomical Object Classification
-Implements various ML algorithms with hyperparameter tuning and cross-validation.
-"""
-
 import numpy as np
 import pandas as pd
 import warnings

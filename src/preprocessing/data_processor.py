@@ -1,8 +1,3 @@
-"""
-Astronomical Data Processor
-Handles data loading, cleaning, feature engineering, and preprocessing for astronomical object classification.
-"""
-
 import pandas as pd
 import numpy as np
 import warnings
