@@ -13,17 +13,34 @@ from src.visualization.visualizer import EnhancedAstronomicalVisualizer
 
 st.set_page_config(page_title="Astronomy Data Dashboard", layout="wide")
 
-# Color mapping for different object types
+# Comprehensive color mapping for different object types
 OBJECT_COLORS = {
-    'STAR': '#FFD700',      # Gold
-    'GALAXY': '#4169E1',    # Royal Blue  
-    'QSO': '#DC143C',       # Crimson
+    # Primary object types (as they appear in the dataset)
+    'STAR': '#FFD700',      # Gold - represents stellar objects
+    'GALAXY': '#4169E1',    # Royal Blue - represents galaxies
+    'QSO': '#DC143C',       # Crimson - represents quasars
+    
+    # Alternative naming conventions
     'Star': '#FFD700',
     'Galaxy': '#4169E1', 
     'Quasar': '#DC143C',
+    
+    # Numeric encodings (if target is encoded)
     0: '#FFD700',           # Star
     1: '#4169E1',           # Galaxy
-    2: '#DC143C'            # Quasar
+    2: '#DC143C',           # Quasar
+    
+    # Additional astronomical object types
+    'GALAXY_ACTIVE': '#8A2BE2',  # Blue Violet for active galaxies
+    'STAR_BINARY': '#FFA500',    # Orange for binary stars
+    'QSO_BL_LAC': '#FF1493',     # Deep Pink for BL Lac objects
+}
+
+# Object type descriptions for better understanding
+OBJECT_DESCRIPTIONS = {
+    'STAR': 'Stars are luminous celestial bodies that generate energy through nuclear fusion in their cores. They appear as point sources of light.',
+    'GALAXY': 'Galaxies are massive collections of stars, gas, dust, and dark matter bound together by gravity. They can contain billions of stars.',
+    'QSO': 'Quasars (Quasi-Stellar Objects) are extremely luminous active galactic nuclei powered by supermassive black holes at their centers.'
 }
 
 
@@ -47,6 +64,48 @@ def get_object_color(obj_type):
 def main():
     st.title("🔭 Astronomical Data Dashboard")
     st.caption("Interactive exploration of photometric colors, redshift features, correlations, and more.")
+    
+    # Add comprehensive information about the dataset
+    st.markdown("""
+    ## 📊 Dataset Information
+    This dashboard analyzes astronomical data from the Sloan Digital Sky Survey (SDSS) containing:
+    - **10,000 astronomical objects** classified into three main types
+    - **Photometric measurements** in 5 bands (u, g, r, i, z)
+    - **Spatial coordinates** (Right Ascension, Declination)
+    - **Redshift measurements** for distance estimation
+    - **Additional metadata** for comprehensive analysis
+    """)
+    
+    # Color legend with explanations
+    st.markdown("### 🎨 Object Type Color Coding")
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        **🟡 STARS (Gold #FFD700)**
+        - Luminous celestial bodies
+        - Generate energy through nuclear fusion
+        - Appear as point sources of light
+        - Count: 4,152 objects
+        """)
+    
+    with col2:
+        st.markdown("""
+        **🔵 GALAXIES (Royal Blue #4169E1)**
+        - Massive collections of stars and matter
+        - Bound together by gravity
+        - Can contain billions of stars
+        - Count: 4,998 objects
+        """)
+    
+    with col3:
+        st.markdown("""
+        **🔴 QUASARS (Crimson #DC143C)**
+        - Extremely luminous active galactic nuclei
+        - Powered by supermassive black holes
+        - Most distant objects in the universe
+        - Count: 850 objects
+        """)
 
     # Only read from data folder
     default_path = os.path.join("data", "Skyserver_SQL2_27_2018_6_51_39_PM.csv")
@@ -71,168 +130,548 @@ def main():
     vis = EnhancedAstronomicalVisualizer()
 
     tabs = st.tabs([
-        "Overview",
-        "Color Indices",
-        "Redshift",
-        "Correlations",
-        "HR Diagram",
-        "Interactive 3D",
-        "Sky Map",
-        "Feature Summary",
+        "📋 Overview",
+        "🌈 Color Indices", 
+        "🔴 Redshift Analysis",
+        "🔗 Correlations",
+        "⭐ HR Diagram",
+        "🌌 Interactive 3D",
+        "🗺️ Sky Map",
+        "📊 Feature Summary",
     ])
 
     # Overview
     with tabs[0]:
-        st.subheader("Data Overview")
+        st.subheader("📋 Data Overview")
+        st.markdown("""
+        This section provides a comprehensive view of the raw and processed astronomical data.
+        """)
+        
+        # Data statistics
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Objects", f"{len(data):,}")
+        with col2:
+            st.metric("Features", len(data.columns))
+        with col3:
+            st.metric("Engineered Features", len(data_eng.columns))
+        with col4:
+            st.metric("Memory Usage", f"{data.memory_usage(deep=True).sum() / 1024**2:.1f} MB")
+        
+        st.subheader("📊 Raw Data Sample")
+        st.markdown("First 50 rows of the original dataset:")
         st.dataframe(data.head(50))
-        st.subheader("Engineered Data Sample")
+        
+        st.subheader("⚙️ Engineered Data Sample")
+        st.markdown("First 50 rows after feature engineering (new features added):")
         st.dataframe(data_eng.head(50))
+        
+        # Data quality information
+        st.subheader("🔍 Data Quality Assessment")
+        missing_data = data.isnull().sum()
+        if missing_data.sum() > 0:
+            st.warning(f"⚠️ Missing values detected: {missing_data.sum()} total missing values")
+            st.dataframe(missing_data[missing_data > 0].to_frame('Missing Count'))
+        else:
+            st.success("✅ No missing values in the dataset")
 
     # Color Indices
     with tabs[1]:
-        st.subheader("Color Indices and Color-Color Diagrams")
+        st.subheader("🌈 Color Indices and Color-Color Diagrams")
+        st.markdown("""
+        **Color indices** are fundamental tools in astronomy for classifying stellar objects. They represent the difference 
+        in brightness between two photometric bands and provide information about:
+        - **Stellar temperature** (hotter stars appear bluer)
+        - **Stellar type** (main sequence, giant, dwarf)
+        - **Redshift effects** (distant objects appear redder)
+        - **Dust extinction** (interstellar dust makes objects appear redder)
+        """)
+        
         required = ["g", "r", "i"]
         if all(col in data_eng.columns for col in required):
             g_r = data_eng["g"] - data_eng["r"]
             r_i = data_eng["r"] - data_eng["i"]
             color_df = pd.DataFrame({"g-r": g_r, "r-i": r_i})
             
+            # Color statistics
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("g-r Mean", f"{g_r.mean():.3f}")
+            with col2:
+                st.metric("r-i Mean", f"{r_i.mean():.3f}")
+            with col3:
+                st.metric("Color Range", f"{g_r.max() - g_r.min():.3f}")
+            
             # Color-color diagram with object types
             if target_col in data_eng.columns:
+                st.markdown("### 🎨 Color-Color Diagram")
+                st.markdown("""
+                The color-color diagram plots g-r vs r-i color indices. Different object types occupy distinct regions:
+                - **Stars**: Follow the main sequence, with hot stars (blue) at bottom-left and cool stars (red) at top-right
+                - **Galaxies**: Generally redder due to older stellar populations and dust
+                - **Quasars**: Often have unique color signatures due to their extreme properties
+                """)
+                
                 fig_scatter = px.scatter(
                     data_eng, x=g_r, y=r_i, color=target_col,
-                    title="Color-Color Diagram (g-r vs r-i)",
-                    labels={'x': 'g-r', 'y': 'r-i'},
-                    color_discrete_map=OBJECT_COLORS
+                    title="Color-Color Diagram (g-r vs r-i) by Object Type",
+                    labels={'x': 'g-r (Color Index)', 'y': 'r-i (Color Index)'},
+                    color_discrete_map=OBJECT_COLORS,
+                    opacity=0.7
                 )
-                fig_scatter.update_layout(height=500)
+                fig_scatter.update_layout(height=500, showlegend=True)
+                fig_scatter.update_traces(marker=dict(size=4))
                 st.plotly_chart(fig_scatter, use_container_width=True)
             
             # Distributions
-            st.write("Color Index Distributions")
+            st.markdown("### 📊 Color Index Distributions")
+            st.markdown("""
+            These histograms show the distribution of color indices across all objects. 
+            The shape reveals the population characteristics of different object types.
+            """)
+            
             fig_dist = make_subplots(rows=1, cols=2, subplot_titles=['g-r Distribution', 'r-i Distribution'])
             
-            fig_dist.add_trace(go.Histogram(x=g_r, name='g-r', marker_color='#FF6B6B'), row=1, col=1)
-            fig_dist.add_trace(go.Histogram(x=r_i, name='r-i', marker_color='#4ECDC4'), row=1, col=2)
+            fig_dist.add_trace(go.Histogram(x=g_r, name='g-r', marker_color='#FF6B6B', opacity=0.7), row=1, col=1)
+            fig_dist.add_trace(go.Histogram(x=r_i, name='r-i', marker_color='#4ECDC4', opacity=0.7), row=1, col=2)
             
             fig_dist.update_layout(height=400, showlegend=False)
+            fig_dist.update_xaxes(title_text="g-r Color Index", row=1, col=1)
+            fig_dist.update_xaxes(title_text="r-i Color Index", row=1, col=2)
+            fig_dist.update_yaxes(title_text="Count", row=1, col=1)
+            fig_dist.update_yaxes(title_text="Count", row=1, col=2)
             st.plotly_chart(fig_dist, use_container_width=True)
+            
+            # Color statistics by object type
+            if target_col in data_eng.columns:
+                st.markdown("### 📈 Color Statistics by Object Type")
+                color_stats = data_eng.groupby(target_col)[['g', 'r', 'i']].agg(['mean', 'std']).round(3)
+                st.dataframe(color_stats)
         else:
-            st.info("Need bands g, r, i for color-color plots.")
+            st.error("❌ Required photometric bands (g, r, i) not found in the dataset.")
 
     # Redshift
     with tabs[2]:
-        st.subheader("Redshift-based Features")
+        st.subheader("🔴 Redshift Analysis")
+        st.markdown("""
+        **Redshift** is a fundamental cosmological parameter that measures how much the light from an object 
+        has been stretched due to the expansion of the universe. It provides crucial information about:
+        - **Distance** to astronomical objects
+        - **Age** of the universe when light was emitted
+        - **Cosmic expansion** rate
+        - **Object classification** (stars have near-zero redshift, galaxies and quasars have positive redshift)
+        """)
+        
         if "redshift" in data_eng.columns:
             redshift = data_eng["redshift"]
-            st.metric("Non-zero redshift count", int((redshift > 0).sum()))
+            
+            # Redshift statistics
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Objects with Redshift", f"{(redshift > 0).sum():,}")
+            with col2:
+                st.metric("Max Redshift", f"{redshift.max():.3f}")
+            with col3:
+                st.metric("Mean Redshift", f"{redshift[redshift > 0].mean():.3f}")
+            with col4:
+                st.metric("Zero Redshift", f"{(redshift == 0).sum():,}")
             
             # Redshift distribution by object type
             if target_col in data_eng.columns:
                 redshift_pos = data_eng[redshift > 0]
                 if len(redshift_pos) > 0:
+                    st.markdown("### 📊 Redshift Distribution by Object Type")
+                    st.markdown("""
+                    The histogram shows the distribution of log₁₀(redshift) for different object types:
+                    - **Stars**: Typically have redshift ≈ 0 (very close to us)
+                    - **Galaxies**: Have moderate redshifts (0.01 - 1.0)
+                    - **Quasars**: Have the highest redshifts (0.1 - 6.0+)
+                    """)
+                    
                     fig_redshift = px.histogram(
                         redshift_pos, x=np.log10(redshift_pos["redshift"]), 
                         color=target_col, nbins=60,
-                        title="log10(redshift) distribution by Object Type",
-                        color_discrete_map=OBJECT_COLORS
+                        title="log₁₀(Redshift) Distribution by Object Type",
+                        color_discrete_map=OBJECT_COLORS,
+                        opacity=0.7
                     )
-                    fig_redshift.update_layout(height=500)
+                    fig_redshift.update_layout(
+                        height=500,
+                        xaxis_title="log₁₀(Redshift)",
+                        yaxis_title="Count",
+                        showlegend=True
+                    )
                     st.plotly_chart(fig_redshift, use_container_width=True)
+                    
+                    # Redshift statistics by object type
+                    st.markdown("### 📈 Redshift Statistics by Object Type")
+                    redshift_stats = redshift_pos.groupby(target_col)['redshift'].agg(['count', 'mean', 'std', 'min', 'max']).round(4)
+                    st.dataframe(redshift_stats)
             else:
                 # Simple histogram if no target column
+                st.markdown("### 📊 Overall Redshift Distribution")
                 fig_redshift = px.histogram(
                     data_eng[redshift > 0], x=np.log10(data_eng.loc[redshift > 0, "redshift"]), 
-                    nbins=60, title="log10(redshift) distribution"
+                    nbins=60, title="log₁₀(Redshift) Distribution",
+                    color_discrete_sequence=['#3498DB']
                 )
+                fig_redshift.update_layout(height=500)
                 st.plotly_chart(fig_redshift, use_container_width=True)
             
             # Category counts
             if "redshift_category" in data_eng.columns:
+                st.markdown("### 🏷️ Redshift Categories")
+                st.markdown("""
+                Objects are categorized based on their redshift values:
+                - **Very Low** (z < 0.1): Nearby objects, mostly stars and local galaxies
+                - **Low** (0.1 ≤ z < 0.5): Intermediate distance galaxies
+                - **Medium** (0.5 ≤ z < 1.0): Distant galaxies
+                - **High** (z ≥ 1.0): Very distant objects, including high-redshift quasars
+                """)
+                
                 cat_counts = data_eng["redshift_category"].value_counts().reset_index()
                 cat_counts.columns = ["category", "count"]
-                fig_cat = px.bar(cat_counts, x="category", y="count", title="Redshift Categories")
+                fig_cat = px.bar(cat_counts, x="category", y="count", 
+                               title="Redshift Categories Distribution",
+                               color="count", color_continuous_scale="viridis")
+                fig_cat.update_layout(height=400)
                 st.plotly_chart(fig_cat, use_container_width=True)
         else:
-            st.info("Redshift column not found.")
+            st.error("❌ Redshift column not found in the dataset.")
 
     # Correlations
     with tabs[3]:
-        st.subheader("Correlation Matrix (numeric features)")
+        st.subheader("🔗 Feature Correlations")
+        st.markdown("""
+        **Correlation analysis** reveals relationships between different features in the dataset. 
+        Understanding these relationships helps in:
+        - **Feature selection** for machine learning models
+        - **Identifying redundant** features
+        - **Understanding physical relationships** between astronomical parameters
+        - **Detecting data quality issues**
+        """)
+        
         num_df = data_eng.select_dtypes(include=[np.number])
         if num_df.shape[1] >= 2:
             corr = num_df.corr()
-            st.dataframe(corr.round(3))
+            
+            # Correlation statistics
+            st.markdown("### 📊 Correlation Statistics")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Features Analyzed", len(corr.columns))
+            with col2:
+                st.metric("Strong Correlations (|r| > 0.7)", (abs(corr) > 0.7).sum().sum() - len(corr))
+            with col3:
+                st.metric("Mean Correlation", f"{corr.abs().mean().mean():.3f}")
+            
+            # Correlation matrix
+            st.markdown("### 🔥 Correlation Heatmap")
+            st.markdown("""
+            The heatmap shows Pearson correlation coefficients between all numeric features:
+            - **Red**: Strong positive correlation (r > 0.5)
+            - **Blue**: Strong negative correlation (r < -0.5)
+            - **White**: Weak correlation (|r| < 0.3)
+            """)
+            
             fig_corr = px.imshow(corr, color_continuous_scale="RdBu", origin="lower", 
-                               title="Correlation Heatmap", aspect="auto")
+                               title="Feature Correlation Heatmap", aspect="auto")
             fig_corr.update_layout(height=600)
             st.plotly_chart(fig_corr, use_container_width=True)
+            
+            # Top correlations
+            st.markdown("### 🎯 Top Feature Correlations")
+            # Get upper triangle of correlation matrix
+            mask = np.triu(np.ones_like(corr, dtype=bool), k=1)
+            corr_upper = corr.where(mask)
+            
+            # Flatten and sort correlations
+            corr_pairs = []
+            for i in range(len(corr.columns)):
+                for j in range(i+1, len(corr.columns)):
+                    corr_val = corr.iloc[i, j]
+                    if not np.isnan(corr_val):
+                        corr_pairs.append({
+                            'Feature 1': corr.columns[i],
+                            'Feature 2': corr.columns[j],
+                            'Correlation': corr_val,
+                            'Abs Correlation': abs(corr_val)
+                        })
+            
+            corr_df = pd.DataFrame(corr_pairs).sort_values('Abs Correlation', ascending=False)
+            st.dataframe(corr_df.head(10).round(3))
+            
         else:
-            st.info("Not enough numeric features for correlation analysis.")
+            st.error("❌ Not enough numeric features for correlation analysis.")
 
     # HR Diagram
     with tabs[4]:
-        st.subheader("Color-Magnitude (H-R like) Diagram")
+        st.subheader("⭐ Hertzsprung-Russell (H-R) Diagram")
+        st.markdown("""
+        The **Hertzsprung-Russell diagram** is a fundamental tool in stellar astronomy that plots:
+        - **X-axis**: Color index (g-r) - represents stellar temperature
+        - **Y-axis**: Absolute magnitude (r) - represents stellar luminosity
+        
+        This diagram reveals stellar evolution patterns and helps classify different types of stars and galaxies.
+        """)
+        
         if all(c in data_eng.columns for c in ["g", "r"]):
             df = data_eng[["g", "r"]].copy()
             df["g-r"] = df["g"] - df["r"]
             
-            if target_col in data_eng.columns:
-                df[target_col] = data_eng[target_col]
-                fig = px.scatter(df, x="g-r", y="r", color=target_col, opacity=0.6, 
-                               title="Color-Magnitude Diagram (g-r vs r) by Object Type",
-                               color_discrete_map=OBJECT_COLORS)
+            # Data validation
+            valid_data = df.dropna()
+            if len(valid_data) == 0:
+                st.error("❌ No valid data points for H-R diagram (all values are NaN)")
             else:
-                fig = px.scatter(df, x="g-r", y="r", opacity=0.6, 
-                               title="Color-Magnitude Diagram (g-r vs r)")
-            
-            fig.update_yaxes(autorange="reversed")
-            fig.update_layout(height=600)
-            st.plotly_chart(fig, use_container_width=True)
+                st.markdown(f"### 📊 H-R Diagram Analysis ({len(valid_data):,} valid points)")
+                
+                # Statistics
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("g-r Range", f"{df['g-r'].min():.2f} to {df['g-r'].max():.2f}")
+                with col2:
+                    st.metric("r Magnitude Range", f"{df['r'].min():.2f} to {df['r'].max():.2f}")
+                with col3:
+                    st.metric("Data Completeness", f"{len(valid_data)/len(df)*100:.1f}%")
+                
+                if target_col in data_eng.columns:
+                    df[target_col] = data_eng[target_col]
+                    st.markdown("""
+                    **Color-coded by object type:**
+                    - **Stars**: Follow the main sequence (diagonal band)
+                    - **Galaxies**: Generally redder and fainter
+                    - **Quasars**: Often have unique color-magnitude signatures
+                    """)
+                    
+                    fig = px.scatter(df, x="g-r", y="r", color=target_col, opacity=0.6, 
+                                   title="Hertzsprung-Russell Diagram (g-r vs r) by Object Type",
+                                   labels={'g-r': 'Color Index (g-r)', 'r': 'r-band Magnitude'},
+                                   color_discrete_map=OBJECT_COLORS)
+                else:
+                    fig = px.scatter(df, x="g-r", y="r", opacity=0.6, 
+                                   title="Hertzsprung-Russell Diagram (g-r vs r)",
+                                   labels={'g-r': 'Color Index (g-r)', 'r': 'r-band Magnitude'})
+                
+                fig.update_yaxes(autorange="reversed")  # Brighter objects at top
+                fig.update_layout(
+                    height=600,
+                    xaxis_title="Color Index (g-r)",
+                    yaxis_title="r-band Magnitude (brighter → fainter)"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+                # Additional analysis
+                if target_col in data_eng.columns:
+                    st.markdown("### 📈 H-R Diagram Statistics by Object Type")
+                    hr_stats = df.groupby(target_col)[['g-r', 'r']].agg(['mean', 'std', 'min', 'max']).round(3)
+                    st.dataframe(hr_stats)
         else:
-            st.info("Need columns g and r.")
+            st.error("❌ Required photometric bands (g, r) not found in the dataset.")
 
     # Interactive 3D
     with tabs[5]:
-        st.subheader("Interactive 3D Visualization")
+        st.subheader("🌌 Interactive 3D Visualization")
+        st.markdown("""
+        **3D visualization** allows you to explore the dataset in three dimensions, revealing patterns 
+        and relationships that might not be visible in 2D plots. You can:
+        - **Rotate and zoom** to explore different angles
+        - **Color-code** by different features
+        - **Identify clusters** and outliers
+        - **Understand spatial relationships** between features
+        """)
+        
         possible_axes = [c for c in ["u", "g", "r", "i", "z", "ra", "dec", "redshift"] if c in data_eng.columns]
         if len(possible_axes) >= 3:
-            x_col = st.selectbox("X axis", options=possible_axes, index=0)
-            y_col = st.selectbox("Y axis", options=possible_axes, index=min(1, len(possible_axes)-1))
-            z_col = st.selectbox("Z axis", options=possible_axes, index=min(2, len(possible_axes)-1))
-            color_col = st.selectbox("Color by", options=[target_col] + possible_axes, index=0)
-            fig3d = vis.create_interactive_3d_visualization(data_eng, x_col, y_col, z_col, color_col=color_col)
-            st.plotly_chart(fig3d, use_container_width=True)
+            st.markdown("### 🎛️ Visualization Controls")
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                x_col = st.selectbox("X axis", options=possible_axes, index=0, 
+                                   help="Choose the feature for the X-axis")
+                y_col = st.selectbox("Y axis", options=possible_axes, index=min(1, len(possible_axes)-1),
+                                   help="Choose the feature for the Y-axis")
+            
+            with col2:
+                z_col = st.selectbox("Z axis", options=possible_axes, index=min(2, len(possible_axes)-1),
+                                   help="Choose the feature for the Z-axis")
+                color_col = st.selectbox("Color by", options=[target_col] + possible_axes, index=0,
+                                       help="Choose the feature for color coding")
+            
+            # Data validation
+            valid_data = data_eng[[x_col, y_col, z_col]].dropna()
+            if len(valid_data) == 0:
+                st.error("❌ No valid data points for 3D visualization (all values are NaN)")
+            else:
+                st.markdown(f"### 📊 3D Visualization ({len(valid_data):,} valid points)")
+                
+                # Statistics
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric(f"{x_col} Range", f"{data_eng[x_col].min():.2f} to {data_eng[x_col].max():.2f}")
+                with col2:
+                    st.metric(f"{y_col} Range", f"{data_eng[y_col].min():.2f} to {data_eng[y_col].max():.2f}")
+                with col3:
+                    st.metric(f"{z_col} Range", f"{data_eng[z_col].min():.2f} to {data_eng[z_col].max():.2f}")
+                
+                fig3d = vis.create_interactive_3d_visualization(data_eng, x_col, y_col, z_col, color_col=color_col)
+                st.plotly_chart(fig3d, use_container_width=True)
+                
+                # Instructions
+                st.markdown("""
+                ### 🎮 How to Use the 3D Visualization
+                - **Rotate**: Click and drag to rotate the view
+                - **Zoom**: Use mouse wheel or pinch gestures
+                - **Pan**: Right-click and drag to move around
+                - **Reset**: Double-click to reset the view
+                - **Hover**: Hover over points to see detailed information
+                """)
         else:
-            st.info("Need at least three numeric columns among u,g,r,i,z,ra,dec,redshift.")
+            st.error("❌ Need at least three numeric columns among u,g,r,i,z,ra,dec,redshift for 3D visualization.")
 
     # Sky Map
     with tabs[6]:
-        st.subheader("Sky Coordinates Map")
+        st.subheader("🗺️ Sky Coordinates Map")
+        st.markdown("""
+        The **sky map** shows the spatial distribution of astronomical objects on the celestial sphere using:
+        - **Right Ascension (RA)**: Angular distance eastward along the celestial equator (0° to 360°)
+        - **Declination (DEC)**: Angular distance north/south of the celestial equator (-90° to +90°)
+        
+        This visualization helps identify:
+        - **Survey coverage** patterns
+        - **Clustering** of similar objects
+        - **Spatial correlations** with galactic structure
+        - **Selection effects** in the dataset
+        """)
+        
         if all(c in data_eng.columns for c in ["ra", "dec"]):
-            if target_col in data_eng.columns:
-                # Color by object type
-                fig_geo = px.scatter_geo(
-                    data_eng, lat="dec", lon="ra", color=target_col,
-                    title="Sky Distribution (RA/DEC) by Object Type",
-                    color_discrete_map=OBJECT_COLORS
-                )
+            # Data validation
+            valid_coords = data_eng[["ra", "dec"]].dropna()
+            if len(valid_coords) == 0:
+                st.error("❌ No valid coordinate data for sky map (all values are NaN)")
             else:
-                fig_geo = px.scatter_geo(
-                    data_eng, lat="dec", lon="ra",
-                    title="Sky Distribution (RA/DEC)"
+                st.markdown(f"### 🌍 Sky Distribution Analysis ({len(valid_coords):,} valid points)")
+                
+                # Coordinate statistics
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("RA Range", f"{data_eng['ra'].min():.1f}° to {data_eng['ra'].max():.1f}°")
+                with col2:
+                    st.metric("DEC Range", f"{data_eng['dec'].min():.1f}° to {data_eng['dec'].max():.1f}°")
+                with col3:
+                    st.metric("Sky Coverage", f"{(data_eng['ra'].max() - data_eng['ra'].min()):.1f}° × {(data_eng['dec'].max() - data_eng['dec'].min()):.1f}°")
+                with col4:
+                    st.metric("Data Completeness", f"{len(valid_coords)/len(data_eng)*100:.1f}%")
+                
+                if target_col in data_eng.columns:
+                    st.markdown("### 🎨 Sky Map by Object Type")
+                    st.markdown("""
+                    **Color-coded by object type:**
+                    - **Stars**: Often clustered in galactic plane
+                    - **Galaxies**: More uniformly distributed
+                    - **Quasars**: Can be found at high galactic latitudes
+                    """)
+                    
+                    fig_geo = px.scatter_geo(
+                        data_eng, lat="dec", lon="ra", color=target_col,
+                        title="Sky Distribution (RA/DEC) by Object Type",
+                        color_discrete_map=OBJECT_COLORS,
+                        opacity=0.7
+                    )
+                else:
+                    fig_geo = px.scatter_geo(
+                        data_eng, lat="dec", lon="ra",
+                        title="Sky Distribution (RA/DEC)",
+                        opacity=0.7
+                    )
+                
+                fig_geo.update_traces(marker=dict(size=3, opacity=0.6))
+                fig_geo.update_layout(
+                    height=600,
+                    geo=dict(
+                        showframe=True,
+                        showcoastlines=True,
+                        projection_type='equirectangular'
+                    )
                 )
-            
-            fig_geo.update_traces(marker=dict(size=3, opacity=0.6))
-            fig_geo.update_layout(height=600)
-            st.plotly_chart(fig_geo, use_container_width=True)
+                st.plotly_chart(fig_geo, use_container_width=True)
+                
+                # Additional analysis
+                if target_col in data_eng.columns:
+                    st.markdown("### 📈 Spatial Statistics by Object Type")
+                    spatial_stats = data_eng.groupby(target_col)[['ra', 'dec']].agg(['mean', 'std', 'min', 'max']).round(2)
+                    st.dataframe(spatial_stats)
         else:
-            st.info("Columns ra and dec not found.")
+            st.error("❌ Required coordinate columns (ra, dec) not found in the dataset.")
 
     # Feature summary
     with tabs[7]:
-        st.subheader("Feature Summary (Numeric)")
-        st.dataframe(feature_summary)
+        st.subheader("📊 Feature Summary")
+        st.markdown("""
+        This comprehensive summary provides detailed statistics for all numeric features in the dataset, 
+        including both original and engineered features. This information is crucial for:
+        - **Understanding data quality** and completeness
+        - **Identifying important features** for machine learning
+        - **Detecting outliers** and data anomalies
+        - **Planning preprocessing** strategies
+        """)
+        
+        # Feature summary statistics
+        st.markdown("### 📈 Dataset Overview")
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Features", len(feature_summary))
+        with col2:
+            st.metric("Complete Features", (feature_summary['Missing_Count'] == 0).sum())
+        with col3:
+            st.metric("Features with Missing Data", (feature_summary['Missing_Count'] > 0).sum())
+        with col4:
+            st.metric("High Variance Features", (feature_summary['Std'] > feature_summary['Std'].quantile(0.9)).sum())
+        
+        # Feature summary table
+        st.markdown("### 📋 Detailed Feature Statistics")
+        st.markdown("""
+        **Column Descriptions:**
+        - **Feature**: Name of the feature
+        - **Type**: Data type (Numeric)
+        - **Missing_Count**: Number of missing values
+        - **Missing_Percentage**: Percentage of missing values
+        - **Mean**: Average value
+        - **Std**: Standard deviation (measure of spread)
+        - **Min/Max**: Minimum and maximum values
+        - **Unique_Values**: Number of distinct values
+        """)
+        
+        # Add search and filter functionality
+        search_term = st.text_input("🔍 Search features:", placeholder="Type to filter features...")
+        if search_term:
+            filtered_summary = feature_summary[feature_summary['Feature'].str.contains(search_term, case=False, na=False)]
+            st.dataframe(filtered_summary, use_container_width=True)
+        else:
+            st.dataframe(feature_summary, use_container_width=True)
+        
+        # Feature quality assessment
+        st.markdown("### 🔍 Feature Quality Assessment")
+        
+        # Missing data analysis
+        missing_features = feature_summary[feature_summary['Missing_Count'] > 0]
+        if len(missing_features) > 0:
+            st.warning(f"⚠️ {len(missing_features)} features have missing data")
+            st.dataframe(missing_features[['Feature', 'Missing_Count', 'Missing_Percentage']].round(2))
+        else:
+            st.success("✅ No missing data in any features")
+        
+        # High variance features
+        high_var_features = feature_summary[feature_summary['Std'] > feature_summary['Std'].quantile(0.9)]
+        if len(high_var_features) > 0:
+            st.info(f"📊 Top {len(high_var_features)} highest variance features:")
+            st.dataframe(high_var_features[['Feature', 'Std', 'Min', 'Max']].round(3))
+        
+        # Low variance features (potential constants)
+        low_var_features = feature_summary[feature_summary['Std'] < 0.01]
+        if len(low_var_features) > 0:
+            st.warning(f"⚠️ {len(low_var_features)} features have very low variance (potential constants):")
+            st.dataframe(low_var_features[['Feature', 'Std', 'Min', 'Max']].round(6))
 
     st.sidebar.divider()
     st.sidebar.markdown("**Object Type Colors:**")
