@@ -30,7 +30,8 @@ class EnhancedAstronomicalVisualizer:
             'primary': ['#E74C3C', '#3498DB', '#2ECC71', '#F39C12', '#9B59B6', '#1ABC9C'],
             'astronomical': ['#FFD700', '#4169E1', '#DC143C', '#32CD32', '#FF69B4'],
             'gradient': ['#667eea', '#764ba2', '#f093fb', '#f5576c'],
-            'cosmic': ['#1a1a2e', '#16213e', '#0f3460', '#533483']
+            'cosmic': ['#1a1a2e', '#16213e', '#0f3460', '#533483'],
+            'secondary': ['#FF6B6B', '#4ECDC4', '#FFA500', '#FF1493']
         }
         
         # Astronomical object type mappings

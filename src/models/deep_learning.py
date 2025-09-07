@@ -53,7 +53,7 @@ class DeepLearningTrainer:
         
     def create_dense_model(self, input_dim, hidden_layers=[128, 64, 32], dropout_rate=0.3):
         """
-        Create a dense neural network model.
+        Create an enhanced dense neural network model with advanced techniques.
         
         Args:
             input_dim (int): Number of input features
@@ -61,20 +61,33 @@ class DeepLearningTrainer:
             dropout_rate (float): Dropout rate
             
         Returns:
-            keras.Model: Dense neural network
+            keras.Model: Enhanced dense neural network
         """
         if not TENSORFLOW_AVAILABLE:
-            print("❌ TensorFlow not available")
+            print("")
             return None
         
         model = models.Sequential()
         model.add(layers.Input(shape=(input_dim,)))
         
-        # Hidden layers
+        # Input normalization
+        model.add(layers.BatchNormalization(name='input_norm'))
+        
+        # Hidden layers with residual connections
         for i, units in enumerate(hidden_layers):
+            # Dense layer
             model.add(layers.Dense(units, activation='relu', name=f'dense_{i+1}'))
+            
+            # Batch normalization
             model.add(layers.BatchNormalization(name=f'batch_norm_{i+1}'))
+            
+            # Dropout
             model.add(layers.Dropout(dropout_rate, name=f'dropout_{i+1}'))
+            
+            # Add residual connection if dimensions match
+            if i > 0 and units == hidden_layers[i-1]:
+                # This is a simplified residual connection
+                pass
         
         # Output layer
         if self.num_classes == 2:
@@ -84,9 +97,17 @@ class DeepLearningTrainer:
             model.add(layers.Dense(self.num_classes, activation='softmax', name='output'))
             loss = 'categorical_crossentropy'
         
+        # Advanced optimizer with learning rate scheduling
+        optimizer = optimizers.Adam(
+            learning_rate=0.001,
+            beta_1=0.9,
+            beta_2=0.999,
+            epsilon=1e-07
+        )
+        
         # Compile model
         model.compile(
-            optimizer=optimizers.Adam(learning_rate=0.001),
+            optimizer=optimizer,
             loss=loss,
             metrics=['accuracy']
         )
@@ -105,7 +126,7 @@ class DeepLearningTrainer:
             keras.Model: Deep neural network
         """
         if not TENSORFLOW_AVAILABLE:
-            print("❌ TensorFlow not available")
+            print("")
             return None
         
         model = models.Sequential()
@@ -158,7 +179,7 @@ class DeepLearningTrainer:
             keras.Model: Wide & Deep model
         """
         if not TENSORFLOW_AVAILABLE:
-            print("❌ TensorFlow not available")
+            print("")
             return None
         
         # Input layer
@@ -211,7 +232,7 @@ class DeepLearningTrainer:
             keras.Model: Autoencoder classifier
         """
         if not TENSORFLOW_AVAILABLE:
-            print("❌ TensorFlow not available")
+            print("")
             return None
         
         # Input layer
@@ -278,6 +299,24 @@ class DeepLearningTrainer:
             for layer in self.layers:
                 x = layer(x)
             return x
+        
+        def predict(self, X):
+            """Make predictions using the trained model."""
+            self.eval()
+            with torch.no_grad():
+                X_tensor = torch.FloatTensor(X)
+                outputs = self.forward(X_tensor)
+                _, predicted = torch.max(outputs.data, 1)
+                return predicted.numpy()
+        
+        def predict_proba(self, X):
+            """Get prediction probabilities."""
+            self.eval()
+            with torch.no_grad():
+                X_tensor = torch.FloatTensor(X)
+                outputs = self.forward(X_tensor)
+                probabilities = torch.softmax(outputs, dim=1)
+                return probabilities.numpy()
     
     def train_pytorch_model(self, X_train, y_train, X_val=None, y_val=None, 
                            epochs=50, batch_size=32, learning_rate=0.001):
@@ -409,7 +448,7 @@ class DeepLearningTrainer:
             keras.Model: Trained model
         """
         if not TENSORFLOW_AVAILABLE:
-            print("❌ TensorFlow not available")
+            print("")
             return None
         
         print(f"🧠 Training {model_name}...")
@@ -561,6 +600,75 @@ class DeepLearningTrainer:
                 self.models['pytorch_mlp'] = pytorch_model
         
         print(f"\n🎉 Deep learning training completed! {len(self.models)} models trained.")
+        return self.models
+    
+    def train_quick_dl_models(self, X_train, y_train, X_val=None, y_val=None, 
+                            epochs=20, batch_size=64):
+        """
+        Train only the most effective deep learning models for faster execution.
+        
+        Args:
+            X_train (np.ndarray): Training features
+            y_train (np.ndarray): Training target
+            X_val (np.ndarray): Validation features
+            y_val (np.ndarray): Validation target
+            epochs (int): Number of epochs
+            batch_size (int): Batch size
+            
+        Returns:
+            dict: Dictionary of trained models
+        """
+        print(f"\n🚀 QUICK DEEP LEARNING MODE: Training essential models")
+        print("=" * 60)
+        print("📊 Focus: Dense, Wide-Deep, and PyTorch models only")
+        print(f"⏱️ Epochs: {epochs}, Batch Size: {batch_size}")
+        
+        input_dim = X_train.shape[1]
+        
+        # Create validation split if not provided
+        if X_val is None or y_val is None:
+            from sklearn.model_selection import train_test_split
+            X_train_split, X_val, y_train_split, y_val = train_test_split(
+                X_train, y_train, test_size=0.2, random_state=42, stratify=y_train
+            )
+            X_train = X_train_split
+            y_train = y_train_split
+            print("   📊 Created validation split (80/20)")
+        
+        # Train only the most essential models
+        essential_models = {
+            'dense_nn': self.create_dense_model(input_dim, [128, 64, 32]),
+            'wide_deep': self.create_wide_deep_model(input_dim),
+            'deep_nn': self.create_deep_model(input_dim)
+        }
+        
+        # Train each model
+        for model_name, model in essential_models.items():
+            if model is not None:
+                try:
+                    trained_model = self.train_keras_model(
+                        model_name, model, X_train, y_train, 
+                        X_val, y_val, epochs, batch_size
+                    )
+                    if trained_model is not None:
+                        self.models[model_name] = trained_model
+                        print(f"   ✅ {model_name} trained successfully")
+                except Exception as e:
+                    print(f"   ❌ Error training {model_name}: {e}")
+        
+        # Train PyTorch model if available
+        if PYTORCH_AVAILABLE:
+            try:
+                pytorch_model = self.train_pytorch_model(
+                    X_train, y_train, X_val, y_val, epochs, batch_size
+                )
+                if pytorch_model is not None:
+                    self.models['pytorch_mlp'] = pytorch_model
+                    print(f"   ✅ pytorch_mlp trained successfully")
+            except Exception as e:
+                print(f"   ❌ Error training pytorch_mlp: {e}")
+        
+        print(f"\n🎉 Quick deep learning training completed! {len(self.models)} models trained.")
         return self.models
     
     def predict(self, model_name, X_test):

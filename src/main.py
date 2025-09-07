@@ -1,8 +1,3 @@
-"""
-Main Execution Script for Astronomical Object Classification
-Orchestrates the entire ML pipeline from data loading to model evaluation.
-"""
-
 import os
 import sys
 import warnings
@@ -24,11 +19,7 @@ def main():
     """
     Main execution function for the astronomical classification pipeline.
     """
-    print("🌟" * 20)
     print("ASTRONOMICAL OBJECT CLASSIFICATION PIPELINE")
-    print("🌟" * 20)
-    print()
-    
     # Initialize components
     processor = AstronomicalDataProcessor()
     ml_trainer = MLModelTrainer()
@@ -36,15 +27,17 @@ def main():
     evaluator = ModelEvaluator()
     visualizer = EnhancedAstronomicalVisualizer()
     
-    # Configuration
+    # Configuration - Optimized for faster training
     config = {
         'data_path': 'data/Skyserver_SQL2_27_2018_6_51_39_PM.csv',
         'target_col': 'class',
         'test_size': 0.2,
         'random_state': 42,
-        'cv_folds': 5,
-        'deep_learning_epochs': 50,
-        'deep_learning_batch_size': 32
+        'cv_folds': 3,  # Reduced from 5 to 3 for faster training
+        'deep_learning_epochs': 20,  # Reduced from 50 to 20 for faster training
+        'deep_learning_batch_size': 64,  # Increased batch size for faster training
+        'quick_mode': True,  # Enable quick mode for faster training
+        'max_features': 20  # Limit features for faster training
     }
     
     print("📋 Configuration:")
@@ -53,9 +46,9 @@ def main():
     print()
     
     # Step 1: Data Loading and Exploration
-    print("=" * 60)
+    
     print("STEP 1: DATA LOADING AND EXPLORATION")
-    print("=" * 60)
+    
     
     # Check if data file exists
     if not os.path.exists(config['data_path']):
@@ -95,8 +88,8 @@ def main():
     # Scale features
     X_scaled = processor.scale_features(X, method='standard')
     
-    # Feature selection
-    X_selected = processor.select_features(X_scaled, y, method='mutual_info', k=50)
+    # Feature selection - Reduced for faster training
+    X_selected = processor.select_features(X_scaled, y, method='mutual_info', k=config['max_features'])
     
     # Split data
     X_train, X_test, y_train, y_test = train_test_split(
@@ -114,10 +107,19 @@ def main():
     print("STEP 3: TRADITIONAL MACHINE LEARNING")
     print("=" * 60)
     
-    # Train all ML models
-    ml_models = ml_trainer.train_all_models(
-        X_train, y_train, cv=config['cv_folds']
-    )
+    # Train ML models - Quick mode for faster training
+    if config['quick_mode']:
+        print("🚀 Quick Mode: Training only best performing models...")
+        # Train only the most effective models for faster execution
+        quick_models = ['logistic_regression', 'random_forest', 'xgboost', 'lightgbm', 'gradient_boosting']
+        ml_models = ml_trainer.train_quick_models(
+            X_train, y_train, model_names=quick_models, cv=config['cv_folds']
+        )
+    else:
+        # Train all ML models
+        ml_models = ml_trainer.train_all_models(
+            X_train, y_train, cv=config['cv_folds']
+        )
     
     # Save ML models
     ml_trainer.save_models('models/')
@@ -127,12 +129,22 @@ def main():
     print("STEP 4: DEEP LEARNING MODELS")
     print("=" * 60)
     
-    # Train deep learning models
-    dl_models = dl_trainer.train_all_models(
-        X_train, y_train, 
-        epochs=config['deep_learning_epochs'],
-        batch_size=config['deep_learning_batch_size']
-    )
+    # Train deep learning models - Quick mode for faster training
+    if config['quick_mode']:
+        print("🚀 Quick Mode: Training only essential deep learning models...")
+        # Train only the most effective DL models for faster execution
+        dl_models = dl_trainer.train_quick_dl_models(
+            X_train, y_train, 
+            epochs=config['deep_learning_epochs'],
+            batch_size=config['deep_learning_batch_size']
+        )
+    else:
+        # Train all deep learning models
+        dl_models = dl_trainer.train_all_models(
+            X_train, y_train, 
+            epochs=config['deep_learning_epochs'],
+            batch_size=config['deep_learning_batch_size']
+        )
     
     # Save DL models
     dl_trainer.save_models('models/')
@@ -189,7 +201,7 @@ def main():
     print("=" * 60)
     
     # Get best model
-    best_model_name, best_score = evaluator.get_best_model('accuracy')
+    best_model_name, best_score = evaluator.get_best_model('Accuracy')
     print(f"🏆 Best Model: {best_model_name}")
     print(f"🏆 Best Accuracy: {best_score:.4f}")
     

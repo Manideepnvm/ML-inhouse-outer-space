@@ -130,14 +130,14 @@ def main():
     vis = EnhancedAstronomicalVisualizer()
 
     tabs = st.tabs([
-        "📋 Overview",
-        "🌈 Color Indices", 
-        "🔴 Redshift Analysis",
-        "🔗 Correlations",
-        "⭐ HR Diagram",
-        "🌌 Interactive 3D",
-        "🗺️ Sky Map",
-        "📊 Feature Summary",
+        " Overview",
+        " Color Indices", 
+        " Redshift Analysis",
+        " Correlations",
+        " HR Diagram",
+        " Interactive 3D",
+        " Sky Map",
+        " Feature Summary",
     ])
 
     # Overview

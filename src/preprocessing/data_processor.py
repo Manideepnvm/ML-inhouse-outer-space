@@ -10,9 +10,6 @@ import seaborn as sns
 warnings.filterwarnings('ignore')
 
 class AstronomicalDataProcessor:
-    """
-    A comprehensive data processor for astronomical datasets.
-    """
     
     def __init__(self):
         """Initialize the data processor with default configurations."""

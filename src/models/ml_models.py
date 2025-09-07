@@ -1,14 +1,15 @@
 import numpy as np
 import pandas as pd
 import warnings
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, ExtraTreesClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.svm import SVC
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, ExtraTreesClassifier, VotingClassifier, StackingClassifier, BaggingClassifier, AdaBoostClassifier
+from sklearn.linear_model import LogisticRegression, RidgeClassifier, SGDClassifier
+from sklearn.svm import SVC, LinearSVC
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.naive_bayes import GaussianNB
+from sklearn.naive_bayes import GaussianNB, MultinomialNB, BernoulliNB
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.model_selection import cross_val_score, GridSearchCV, RandomizedSearchCV
-from sklearn.metrics import classification_report, accuracy_score, confusion_matrix
+from sklearn.model_selection import cross_val_score, GridSearchCV, RandomizedSearchCV, StratifiedKFold
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix, roc_auc_score
+from sklearn.preprocessing import StandardScaler
 import joblib
 import os
 from tqdm import tqdm
@@ -48,41 +49,80 @@ class MLModelTrainer:
         self.best_params = {}
         self.cv_scores = {}
         self.feature_importance = {}
+        self.ensemble_models = {}
+        self.scaler = StandardScaler()
         
     def get_model_configs(self):
         """
-        Get model configurations with hyperparameters.
+        Get enhanced model configurations with comprehensive hyperparameters.
         
         Returns:
-            dict: Model configurations
+            dict: Model configurations with advanced parameter grids
         """
         configs = {
             'logistic_regression': {
-                'model': LogisticRegression(random_state=42, max_iter=1000),
+                'model': LogisticRegression(random_state=42, max_iter=2000),
                 'params': {
-                    'C': [0.001, 0.01, 0.1, 1, 10, 100],
+                    'C': [0.001, 0.01, 0.1, 0.5, 1, 2, 5, 10, 50, 100],
                     'penalty': ['l1', 'l2', 'elasticnet'],
-                    'solver': ['liblinear', 'saga']
-                }
+                    'solver': ['liblinear', 'saga', 'lbfgs'],
+                    'class_weight': [None, 'balanced'],
+                    'l1_ratio': [0.15, 0.5, 0.7, 0.9]  # For elasticnet
+                },
+                'description': """
+                **Logistic Regression** is a linear classification algorithm that uses the logistic function 
+                to model the probability of class membership. It's excellent for:
+                - Binary and multiclass classification
+                - When you need interpretable results
+                - Linear decision boundaries
+                - Fast training and prediction
+                - Feature importance through coefficients
+                """
             },
             'random_forest': {
-                'model': RandomForestClassifier(random_state=42, n_jobs=-1),
+                'model': RandomForestClassifier(random_state=42, n_jobs=-1, oob_score=True),
                 'params': {
-                    'n_estimators': [100, 200, 300],
-                    'max_depth': [10, 20, 30, None],
-                    'min_samples_split': [2, 5, 10],
-                    'min_samples_leaf': [1, 2, 4],
-                    'max_features': ['sqrt', 'log2']
-                }
+                    'n_estimators': [50, 100, 200, 300, 500],
+                    'max_depth': [5, 10, 15, 20, 25, 30, None],
+                    'min_samples_split': [2, 5, 10, 15, 20],
+                    'min_samples_leaf': [1, 2, 4, 6, 8],
+                    'max_features': ['sqrt', 'log2', 0.3, 0.5, 0.7],
+                    'bootstrap': [True, False],
+                    'class_weight': [None, 'balanced', 'balanced_subsample'],
+                    'criterion': ['gini', 'entropy']
+                },
+                'description': """
+                **Random Forest** is an ensemble method that combines multiple decision trees using bagging.
+                It's excellent for:
+                - High accuracy on complex datasets
+                - Handling missing values and outliers
+                - Feature importance ranking
+                - Non-linear decision boundaries
+                - Robust to overfitting
+                - Works well with mixed data types
+                """
             },
             'gradient_boosting': {
                 'model': GradientBoostingClassifier(random_state=42),
                 'params': {
-                    'n_estimators': [100, 200, 300],
-                    'learning_rate': [0.01, 0.1, 0.2],
-                    'max_depth': [3, 5, 7],
-                    'subsample': [0.8, 0.9, 1.0]
-                }
+                    'n_estimators': [50, 100, 200, 300, 500],
+                    'learning_rate': [0.001, 0.01, 0.05, 0.1, 0.15, 0.2],
+                    'max_depth': [2, 3, 4, 5, 6, 7, 8],
+                    'subsample': [0.6, 0.7, 0.8, 0.9, 1.0],
+                    'max_features': ['sqrt', 'log2', 0.3, 0.5, 0.7, None],
+                    'min_samples_split': [2, 5, 10, 15],
+                    'min_samples_leaf': [1, 2, 4, 6],
+                    'criterion': ['friedman_mse', 'squared_error']
+                },
+                'description': """
+                **Gradient Boosting** builds models sequentially, each correcting the errors of the previous one.
+                It's excellent for:
+                - High accuracy on structured data
+                - Handling non-linear relationships
+                - Feature importance analysis
+                - Works well with small to medium datasets
+                - Can be prone to overfitting if not tuned properly
+                """
             },
             'extra_trees': {
                 'model': ExtraTreesClassifier(random_state=42, n_jobs=-1),
@@ -204,8 +244,16 @@ class MLModelTrainer:
         model = config['model']
         
         if tune_hyperparams and len(config['params']) > 0:
-            # Use GridSearchCV for hyperparameter tuning
-            search = GridSearchCV(model, config['params'], cv=cv, scoring='accuracy', n_jobs=-1)
+            # Use RandomizedSearchCV for faster hyperparameter tuning
+            from sklearn.model_selection import RandomizedSearchCV
+            search = RandomizedSearchCV(
+                model, config['params'], 
+                n_iter=5,  # Reduced from full grid search to 5 random combinations
+                cv=cv, 
+                scoring='accuracy', 
+                n_jobs=-1,
+                random_state=42
+            )
             search.fit(X_train, y_train)
             model = search.best_estimator_
             self.best_params[model_name] = search.best_params_
@@ -258,6 +306,40 @@ class MLModelTrainer:
                 continue
         
         print(f"\n🎉 Training completed! {len(self.models)} models trained.")
+        return self.models
+    
+    def train_quick_models(self, X_train, y_train, model_names=None, cv=3):
+        """
+        Train only the most effective models for faster execution.
+        
+        Args:
+            X_train (np.ndarray): Training features
+            y_train (np.ndarray): Training target
+            model_names (list): List of model names to train
+            cv (int): Cross-validation folds
+            
+        Returns:
+            dict: Dictionary of trained models
+        """
+        if model_names is None:
+            model_names = ['logistic_regression', 'random_forest', 'xgboost', 'lightgbm', 'gradient_boosting']
+        
+        print(f"\n🚀 QUICK MODE: Training {len(model_names)} best models")
+        print("=" * 50)
+        
+        for model_name in model_names:
+            try:
+                # Train with minimal hyperparameter tuning for speed
+                model = self.train_single_model(
+                    model_name, X_train, y_train, cv=cv, tune_hyperparams=False
+                )
+                if model is not None:
+                    self.models[model_name] = model
+                    print(f"   ✅ {model_name} trained successfully")
+            except Exception as e:
+                print(f"   ❌ Error training {model_name}: {e}")
+        
+        print(f"\n🎉 Quick training completed! {len(self.models)} models trained.")
         return self.models
     
     def predict(self, model_name, X_test):
@@ -667,4 +749,285 @@ class MLModelTrainer:
                 print(f"   {param}: {value}")
         
         return self.best_params
+    
+    def create_advanced_ensembles(self, X_train, y_train, X_val=None, y_val=None):
+        """
+        Create advanced ensemble models including stacking and voting.
+        
+        Args:
+            X_train (np.ndarray): Training features
+            y_train (np.ndarray): Training target
+            X_val (np.ndarray): Validation features
+            y_val (np.ndarray): Validation target
+            
+        Returns:
+            dict: Dictionary of ensemble models
+        """
+        print("\n🎭 CREATING ADVANCED ENSEMBLE MODELS")
+        print("=" * 60)
+        
+        # Ensure we have some base models trained
+        if len(self.models) < 2:
+            print("⚠️ Need at least 2 base models for ensemble creation")
+            return {}
+        
+        # Scale features for ensemble methods
+        X_train_scaled = self.scaler.fit_transform(X_train)
+        X_val_scaled = self.scaler.transform(X_val) if X_val is not None else None
+        
+        # Create base estimators list
+        base_estimators = []
+        for name, model in self.models.items():
+            if hasattr(model, 'predict_proba'):  # Only models with probability predictions
+                base_estimators.append((name, model))
+        
+        if len(base_estimators) < 2:
+            print("⚠️ Need at least 2 models with probability predictions for ensemble")
+            return {}
+        
+        # 1. Voting Classifier (Hard Voting)
+        try:
+            voting_hard = VotingClassifier(
+                estimators=base_estimators,
+                voting='hard'
+            )
+            voting_hard.fit(X_train_scaled, y_train)
+            self.ensemble_models['voting_hard'] = voting_hard
+            print("   ✅ Hard Voting Classifier created")
+        except Exception as e:
+            print(f"   ❌ Error creating hard voting: {e}")
+        
+        # 2. Voting Classifier (Soft Voting)
+        try:
+            voting_soft = VotingClassifier(
+                estimators=base_estimators,
+                voting='soft'
+            )
+            voting_soft.fit(X_train_scaled, y_train)
+            self.ensemble_models['voting_soft'] = voting_soft
+            print("   ✅ Soft Voting Classifier created")
+        except Exception as e:
+            print(f"   ❌ Error creating soft voting: {e}")
+        
+        # 3. Stacking Classifier
+        try:
+            # Use logistic regression as meta-learner
+            meta_learner = LogisticRegression(random_state=42, max_iter=1000)
+            stacking = StackingClassifier(
+                estimators=base_estimators,
+                final_estimator=meta_learner,
+                cv=5,
+                stack_method='predict_proba'
+            )
+            stacking.fit(X_train_scaled, y_train)
+            self.ensemble_models['stacking'] = stacking
+            print("   ✅ Stacking Classifier created")
+        except Exception as e:
+            print(f"   ❌ Error creating stacking: {e}")
+        
+        # 4. Bagging with best performing model
+        try:
+            # Find best performing model
+            best_model_name = max(self.cv_scores.keys(), 
+                                key=lambda k: np.mean(self.cv_scores[k]) if isinstance(self.cv_scores[k], (list, np.ndarray)) else self.cv_scores[k])
+            best_model = self.models[best_model_name]
+            
+            bagging = BaggingClassifier(
+                base_estimator=best_model,
+                n_estimators=10,
+                random_state=42,
+                n_jobs=-1
+            )
+            bagging.fit(X_train_scaled, y_train)
+            self.ensemble_models['bagging'] = bagging
+            print(f"   ✅ Bagging Classifier created (base: {best_model_name})")
+        except Exception as e:
+            print(f"   ❌ Error creating bagging: {e}")
+        
+        # 5. AdaBoost with Decision Tree
+        try:
+            ada_boost = AdaBoostClassifier(
+                base_estimator=DecisionTreeClassifier(max_depth=3),
+                n_estimators=50,
+                learning_rate=1.0,
+                random_state=42
+            )
+            ada_boost.fit(X_train_scaled, y_train)
+            self.ensemble_models['adaboost'] = ada_boost
+            print("   ✅ AdaBoost Classifier created")
+        except Exception as e:
+            print(f"   ❌ Error creating AdaBoost: {e}")
+        
+        # Evaluate ensemble models
+        if X_val is not None and y_val is not None:
+            print("\n📊 Evaluating Ensemble Models:")
+            for name, model in self.ensemble_models.items():
+                try:
+                    y_pred = model.predict(X_val_scaled)
+                    accuracy = accuracy_score(y_val, y_pred)
+                    print(f"   {name}: {accuracy:.4f}")
+                except Exception as e:
+                    print(f"   {name}: Error - {e}")
+        
+        print(f"\n🎉 Ensemble creation completed! {len(self.ensemble_models)} ensemble models created.")
+        return self.ensemble_models
+    
+    def create_custom_stacking(self, X_train, y_train, X_val=None, y_val=None, 
+                             meta_learners=None, cv_folds=5):
+        """
+        Create custom stacking ensemble with multiple meta-learners.
+        
+        Args:
+            X_train (np.ndarray): Training features
+            y_train (np.ndarray): Training target
+            X_val (np.ndarray): Validation features
+            y_val (np.ndarray): Validation target
+            meta_learners (list): List of meta-learners to try
+            cv_folds (int): Number of CV folds for stacking
+            
+        Returns:
+            dict: Dictionary of custom stacking models
+        """
+        if meta_learners is None:
+            meta_learners = [
+                ('logistic', LogisticRegression(random_state=42, max_iter=1000)),
+                ('ridge', RidgeClassifier(random_state=42)),
+                ('svm', SVC(random_state=42, probability=True)),
+                ('rf', RandomForestClassifier(random_state=42, n_estimators=50))
+            ]
+        
+        print("\n🔧 CREATING CUSTOM STACKING MODELS")
+        print("-" * 40)
+        
+        X_train_scaled = self.scaler.fit_transform(X_train)
+        X_val_scaled = self.scaler.transform(X_val) if X_val is not None else None
+        
+        # Get base estimators
+        base_estimators = [(name, model) for name, model in self.models.items() 
+                          if hasattr(model, 'predict_proba')]
+        
+        if len(base_estimators) < 2:
+            print("⚠️ Need at least 2 base models for stacking")
+            return {}
+        
+        custom_stacking_models = {}
+        
+        for meta_name, meta_learner in meta_learners:
+            try:
+                stacking = StackingClassifier(
+                    estimators=base_estimators,
+                    final_estimator=meta_learner,
+                    cv=cv_folds,
+                    stack_method='predict_proba',
+                    n_jobs=-1
+                )
+                stacking.fit(X_train_scaled, y_train)
+                custom_stacking_models[f'stacking_{meta_name}'] = stacking
+                print(f"   ✅ Stacking with {meta_name} meta-learner created")
+                
+                # Evaluate if validation data provided
+                if X_val is not None and y_val is not None:
+                    y_pred = stacking.predict(X_val_scaled)
+                    accuracy = accuracy_score(y_val, y_pred)
+                    print(f"      Validation accuracy: {accuracy:.4f}")
+                    
+            except Exception as e:
+                print(f"   ❌ Error creating stacking with {meta_name}: {e}")
+        
+        self.ensemble_models.update(custom_stacking_models)
+        return custom_stacking_models
+    
+    def hyperparameter_optimization(self, X_train, y_train, model_name, 
+                                  method='grid', n_iter=50, cv=5):
+        """
+        Advanced hyperparameter optimization using GridSearch or RandomizedSearch.
+        
+        Args:
+            X_train (np.ndarray): Training features
+            y_train (np.ndarray): Training target
+            model_name (str): Name of the model to optimize
+            method (str): Optimization method ('grid' or 'random')
+            n_iter (int): Number of iterations for RandomizedSearch
+            cv (int): Number of CV folds
+            
+        Returns:
+            object: Best model with optimized parameters
+        """
+        print(f"\n🎯 HYPERPARAMETER OPTIMIZATION ({method.upper()})")
+        print(f"Model: {model_name}")
+        print("-" * 40)
+        
+        configs = self.get_model_configs()
+        if model_name not in configs:
+            print(f"❌ Model '{model_name}' not found")
+            return None
+        
+        config = configs[model_name]
+        model = config['model']
+        param_grid = config['params']
+        
+        # Scale features if needed
+        X_train_scaled = self.scaler.fit_transform(X_train)
+        
+        # Choose optimization method
+        if method.lower() == 'grid':
+            search = GridSearchCV(
+                model, param_grid, cv=cv, scoring='accuracy', 
+                n_jobs=-1, verbose=0
+            )
+        elif method.lower() == 'random':
+            search = RandomizedSearchCV(
+                model, param_grid, n_iter=n_iter, cv=cv, 
+                scoring='accuracy', n_jobs=-1, verbose=0, random_state=42
+            )
+        else:
+            print(f"❌ Unknown optimization method: {method}")
+            return None
+        
+        # Perform search
+        try:
+            search.fit(X_train_scaled, y_train)
+            
+            # Store results
+            self.best_params[model_name] = search.best_params_
+            self.models[model_name] = search.best_estimator_
+            
+            # Cross-validation score
+            cv_scores = cross_val_score(search.best_estimator_, X_train_scaled, y_train, cv=cv)
+            self.cv_scores[model_name] = cv_scores
+            
+            print(f"   ✅ Best parameters: {search.best_params_}")
+            print(f"   ✅ Best CV score: {search.best_score_:.4f}")
+            print(f"   ✅ CV std: {cv_scores.std():.4f}")
+            
+            return search.best_estimator_
+            
+        except Exception as e:
+            print(f"   ❌ Error during optimization: {e}")
+            return None
+    
+    def get_model_explanations(self):
+        """
+        Get detailed explanations of all available models.
+        
+        Returns:
+            dict: Model explanations
+        """
+        configs = self.get_model_configs()
+        explanations = {}
+        
+        for model_name, config in configs.items():
+            if 'description' in config:
+                explanations[model_name] = config['description']
+        
+        return explanations
+    
+    def create_model_selection_guide(self):
+        """
+        Create a comprehensive model selection guide.
+        
+        Returns:
+            str: Model selection guide
+        """
+        return guide
             
