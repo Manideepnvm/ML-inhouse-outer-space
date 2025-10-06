@@ -1029,5 +1029,20 @@ class MLModelTrainer:
         Returns:
             str: Model selection guide
         """
+        guide = """
+        Model Selection Guide:
+
+        - Use **Logistic Regression** for interpretable, fast, and linear problems.
+        - Use **Random Forest** for robust, high-accuracy results on complex or mixed-type data.
+        - Use **Gradient Boosting/XGBoost/LightGBM/CatBoost** for high accuracy on structured/tabular data, especially when non-linear relationships are present.
+        - Use **SVM** for small-to-medium datasets with clear margins of separation.
+        - Use **KNN** for simple, small datasets where interpretability is not a concern.
+        - Use **Naive Bayes** for text classification or when features are independent.
+        - Use **Decision Tree** for interpretable models and when you want to visualize decision rules.
+        - Use **Ensemble Methods** (Voting, Stacking, Bagging, AdaBoost) to combine strengths of multiple models for improved performance.
+        - Consider **hyperparameter tuning** and **feature importance** analysis for optimal results.
+
+        Select models based on dataset size, interpretability needs, and performance requirements.
+        """
         return guide
             

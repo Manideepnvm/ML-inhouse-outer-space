@@ -1,16 +1,16 @@
 ASTRONOMICAL OBJECT CLASSIFICATION - EVALUATION REPORT
 ======================================================================
 
-Report generated: 2025-09-08 00:38:17.797082
+Report generated: 2025-10-06 22:56:14.595907
 
 MODEL PERFORMANCE SUMMARY
 ------------------------------
               Model  Accuracy  Precision  Recall  F1-Score  ROC-AUC
       random_forest    0.9931     0.9931  0.9931    0.9918   0.9982
            lightgbm    0.9924     0.9918  0.9924    0.9920   0.9989
+        pytorch_mlp    0.9912     0.9912  0.9912    0.9895   0.9980
             xgboost    0.9912     0.9906  0.9912    0.9907   0.9986
 logistic_regression    0.9905     0.9900  0.9905    0.9897   0.9975
-        pytorch_mlp    0.9899     0.9900  0.9899    0.9887   0.9977
   gradient_boosting    0.9887     0.9874  0.9887    0.9880   0.9960
 
 Best Performing Model: random_forest
@@ -126,21 +126,21 @@ weighted avg       0.99      0.99      0.99      1586
 
 Model: pytorch_mlp
 ====================
-Accuracy: 0.9899
-Precision: 0.9900
-Recall: 0.9899
-F1-Score: 0.9887
-ROC-AUC: 0.9977
+Accuracy: 0.9912
+Precision: 0.9912
+Recall: 0.9912
+F1-Score: 0.9895
+ROC-AUC: 0.9980
 
 Classification Report:
               precision    recall  f1-score   support
 
         STAR       0.99      0.99      0.99       928
-      GALAXY       1.00      0.33      0.50        12
-         QSO       0.99      1.00      0.99       646
+      GALAXY       1.00      0.25      0.40        12
+         QSO       0.99      1.00      1.00       646
 
     accuracy                           0.99      1586
-   macro avg       0.99      0.77      0.83      1586
+   macro avg       0.99      0.75      0.80      1586
 weighted avg       0.99      0.99      0.99      1586
 
 --------------------------------------------------
