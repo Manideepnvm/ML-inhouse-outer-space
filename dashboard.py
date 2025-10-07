@@ -67,13 +67,7 @@ def main():
     
     # Add comprehensive information about the dataset
     st.markdown("""
-    ## 📊 Dataset Information
-    This dashboard analyzes astronomical data from the Sloan Digital Sky Survey (SDSS) containing:
-    - **10,000 astronomical objects** classified into three main types
-    - **Photometric measurements** in 5 bands (u, g, r, i, z)
-    - **Spatial coordinates** (Right Ascension, Declination)
-    - **Redshift measurements** for distance estimation
-    - **Additional metadata** for comprehensive analysis
+
     """)
     
     # Color legend with explanations
@@ -82,29 +76,17 @@ def main():
     
     with col1:
         st.markdown("""
-        **🟡 STARS (Gold #FFD700)**
-        - Luminous celestial bodies
-        - Generate energy through nuclear fusion
-        - Appear as point sources of light
-        - Count: 4,152 objects
+       
         """)
     
     with col2:
         st.markdown("""
-        **🔵 GALAXIES (Royal Blue #4169E1)**
-        - Massive collections of stars and matter
-        - Bound together by gravity
-        - Can contain billions of stars
-        - Count: 4,998 objects
+      
         """)
     
     with col3:
         st.markdown("""
-        **🔴 QUASARS (Crimson #DC143C)**
-        - Extremely luminous active galactic nuclei
-        - Powered by supermassive black holes
-        - Most distant objects in the universe
-        - Count: 850 objects
+       
         """)
 
     # Only read from data folder
@@ -179,12 +161,7 @@ def main():
     with tabs[1]:
         st.subheader("🌈 Color Indices and Color-Color Diagrams")
         st.markdown("""
-        **Color indices** are fundamental tools in astronomy for classifying stellar objects. They represent the difference 
-        in brightness between two photometric bands and provide information about:
-        - **Stellar temperature** (hotter stars appear bluer)
-        - **Stellar type** (main sequence, giant, dwarf)
-        - **Redshift effects** (distant objects appear redder)
-        - **Dust extinction** (interstellar dust makes objects appear redder)
+       
         """)
         
         required = ["g", "r", "i"]
@@ -206,10 +183,7 @@ def main():
             if target_col in data_eng.columns:
                 st.markdown("### 🎨 Color-Color Diagram")
                 st.markdown("""
-                The color-color diagram plots g-r vs r-i color indices. Different object types occupy distinct regions:
-                - **Stars**: Follow the main sequence, with hot stars (blue) at bottom-left and cool stars (red) at top-right
-                - **Galaxies**: Generally redder due to older stellar populations and dust
-                - **Quasars**: Often have unique color signatures due to their extreme properties
+         
                 """)
                 
                 fig_scatter = px.scatter(
@@ -254,12 +228,7 @@ def main():
     with tabs[2]:
         st.subheader("🔴 Redshift Analysis")
         st.markdown("""
-        **Redshift** is a fundamental cosmological parameter that measures how much the light from an object 
-        has been stretched due to the expansion of the universe. It provides crucial information about:
-        - **Distance** to astronomical objects
-        - **Age** of the universe when light was emitted
-        - **Cosmic expansion** rate
-        - **Object classification** (stars have near-zero redshift, galaxies and quasars have positive redshift)
+     
         """)
         
         if "redshift" in data_eng.columns:
@@ -282,10 +251,7 @@ def main():
                 if len(redshift_pos) > 0:
                     st.markdown("### 📊 Redshift Distribution by Object Type")
                     st.markdown("""
-                    The histogram shows the distribution of log₁₀(redshift) for different object types:
-                    - **Stars**: Typically have redshift ≈ 0 (very close to us)
-                    - **Galaxies**: Have moderate redshifts (0.01 - 1.0)
-                    - **Quasars**: Have the highest redshifts (0.1 - 6.0+)
+                   
                     """)
                     
                     fig_redshift = px.histogram(
@@ -322,11 +288,7 @@ def main():
             if "redshift_category" in data_eng.columns:
                 st.markdown("### 🏷️ Redshift Categories")
                 st.markdown("""
-                Objects are categorized based on their redshift values:
-                - **Very Low** (z < 0.1): Nearby objects, mostly stars and local galaxies
-                - **Low** (0.1 ≤ z < 0.5): Intermediate distance galaxies
-                - **Medium** (0.5 ≤ z < 1.0): Distant galaxies
-                - **High** (z ≥ 1.0): Very distant objects, including high-redshift quasars
+
                 """)
                 
                 cat_counts = data_eng["redshift_category"].value_counts().reset_index()
@@ -343,12 +305,7 @@ def main():
     with tabs[3]:
         st.subheader("🔗 Feature Correlations")
         st.markdown("""
-        **Correlation analysis** reveals relationships between different features in the dataset. 
-        Understanding these relationships helps in:
-        - **Feature selection** for machine learning models
-        - **Identifying redundant** features
-        - **Understanding physical relationships** between astronomical parameters
-        - **Detecting data quality issues**
+        
         """)
         
         num_df = data_eng.select_dtypes(include=[np.number])
@@ -408,11 +365,7 @@ def main():
     with tabs[4]:
         st.subheader("⭐ Hertzsprung-Russell (H-R) Diagram")
         st.markdown("""
-        The **Hertzsprung-Russell diagram** is a fundamental tool in stellar astronomy that plots:
-        - **X-axis**: Color index (g-r) - represents stellar temperature
-        - **Y-axis**: Absolute magnitude (r) - represents stellar luminosity
         
-        This diagram reveals stellar evolution patterns and helps classify different types of stars and galaxies.
         """)
         
         if all(c in data_eng.columns for c in ["g", "r"]):
@@ -438,10 +391,7 @@ def main():
                 if target_col in data_eng.columns:
                     df[target_col] = data_eng[target_col]
                     st.markdown("""
-                    **Color-coded by object type:**
-                    - **Stars**: Follow the main sequence (diagonal band)
-                    - **Galaxies**: Generally redder and fainter
-                    - **Quasars**: Often have unique color-magnitude signatures
+                 
                     """)
                     
                     fig = px.scatter(df, x="g-r", y="r", color=target_col, opacity=0.6, 
@@ -473,12 +423,7 @@ def main():
     with tabs[5]:
         st.subheader("🌌 Interactive 3D Visualization")
         st.markdown("""
-        **3D visualization** allows you to explore the dataset in three dimensions, revealing patterns 
-        and relationships that might not be visible in 2D plots. You can:
-        - **Rotate and zoom** to explore different angles
-        - **Color-code** by different features
-        - **Identify clusters** and outliers
-        - **Understand spatial relationships** between features
+
         """)
         
         possible_axes = [c for c in ["u", "g", "r", "i", "z", "ra", "dec", "redshift"] if c in data_eng.columns]
@@ -519,12 +464,7 @@ def main():
                 
                 # Instructions
                 st.markdown("""
-                ### 🎮 How to Use the 3D Visualization
-                - **Rotate**: Click and drag to rotate the view
-                - **Zoom**: Use mouse wheel or pinch gestures
-                - **Pan**: Right-click and drag to move around
-                - **Reset**: Double-click to reset the view
-                - **Hover**: Hover over points to see detailed information
+            
                 """)
         else:
             st.error("❌ Need at least three numeric columns among u,g,r,i,z,ra,dec,redshift for 3D visualization.")
@@ -533,15 +473,7 @@ def main():
     with tabs[6]:
         st.subheader("🗺️ Sky Coordinates Map")
         st.markdown("""
-        The **sky map** shows the spatial distribution of astronomical objects on the celestial sphere using:
-        - **Right Ascension (RA)**: Angular distance eastward along the celestial equator (0° to 360°)
-        - **Declination (DEC)**: Angular distance north/south of the celestial equator (-90° to +90°)
         
-        This visualization helps identify:
-        - **Survey coverage** patterns
-        - **Clustering** of similar objects
-        - **Spatial correlations** with galactic structure
-        - **Selection effects** in the dataset
         """)
         
         if all(c in data_eng.columns for c in ["ra", "dec"]):
@@ -566,10 +498,7 @@ def main():
                 if target_col in data_eng.columns:
                     st.markdown("### 🎨 Sky Map by Object Type")
                     st.markdown("""
-                    **Color-coded by object type:**
-                    - **Stars**: Often clustered in galactic plane
-                    - **Galaxies**: More uniformly distributed
-                    - **Quasars**: Can be found at high galactic latitudes
+                  
                     """)
                     
                     fig_geo = px.scatter_geo(
@@ -608,12 +537,7 @@ def main():
     with tabs[7]:
         st.subheader("📊 Feature Summary")
         st.markdown("""
-        This comprehensive summary provides detailed statistics for all numeric features in the dataset, 
-        including both original and engineered features. This information is crucial for:
-        - **Understanding data quality** and completeness
-        - **Identifying important features** for machine learning
-        - **Detecting outliers** and data anomalies
-        - **Planning preprocessing** strategies
+       
         """)
         
         # Feature summary statistics
@@ -631,15 +555,7 @@ def main():
         # Feature summary table
         st.markdown("### 📋 Detailed Feature Statistics")
         st.markdown("""
-        **Column Descriptions:**
-        - **Feature**: Name of the feature
-        - **Type**: Data type (Numeric)
-        - **Missing_Count**: Number of missing values
-        - **Missing_Percentage**: Percentage of missing values
-        - **Mean**: Average value
-        - **Std**: Standard deviation (measure of spread)
-        - **Min/Max**: Minimum and maximum values
-        - **Unique_Values**: Number of distinct values
+      
         """)
         
         # Add search and filter functionality
