@@ -137,8 +137,6 @@ def main():
             st.metric("Features", len(data.columns))
         with col3:
             st.metric("Engineered Features", len(data_eng.columns))
-        with col4:
-            st.metric("Memory Usage", f"{data.memory_usage(deep=True).sum() / 1024**2:.1f} MB")
         
         st.subheader("📊 Raw Data Sample")
         st.markdown("First 50 rows of the original dataset:")
