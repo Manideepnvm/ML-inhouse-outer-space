@@ -68,7 +68,10 @@ def main():
     
     # Create visualizations
     print("\n📊 Creating initial data visualizations...")
-    visualizer.plot_data_distribution(data, config['target_col'])
+    if 'class' in data.columns:
+        visualizer.plot_data_distribution(data, 'class')
+    else:
+        print(f"   ⚠️ Skipping target distribution (no 'class' column)")
     visualizer.plot_correlation_matrix(data)
     
     # Step 2: Data Preprocessing
@@ -82,8 +85,22 @@ def main():
     # Engineer features
     data_engineered = processor.engineer_features(data_clean)
     
+    # Find target column dynamically (case-insensitive)
+    target_column = None
+    target_candidates = ['class', 'target', 'label', 'type', 'classification']
+    for candidate in target_candidates:
+        if candidate.lower() in [col.lower() for col in data_engineered.columns]:
+            target_column = next(col for col in data_engineered.columns if col.lower() == candidate.lower())
+            print(f"✅ Found target column: '{target_column}'")
+            break
+    
+    if target_column is None:
+        print(f"❌ No target column found (looked for: {target_candidates})")
+        print(f"   Available columns: {list(data_engineered.columns[:20])}")
+        return
+    
     # Prepare features for ML
-    X, y = processor.prepare_features(data_engineered, config['target_col'])
+    X, y = processor.prepare_features(data_engineered, target_column)
     
     # Scale features
     X_scaled = processor.scale_features(X, method='standard')
@@ -193,7 +210,7 @@ def main():
     
     # Astronomical features analysis
     print("🌟 Creating astronomical feature analysis...")
-    visualizer.plot_astronomical_features(data_engineered, target_col=config['target_col'])
+    visualizer.plot_astronomical_features(data_engineered, target_col=target_column)
     
     # Step 7: Results Summary
     print("\n" + "=" * 60)
@@ -219,7 +236,7 @@ def main():
     print("=" * 60)
     
     # Create interactive dashboard
-    dashboard = visualizer.create_interactive_dashboard(data_engineered, config['target_col'])
+    dashboard = visualizer.create_interactive_dashboard(data_engineered, target_column)
     
     # Save dashboard as HTML
     if dashboard:

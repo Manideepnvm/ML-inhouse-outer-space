@@ -89,8 +89,8 @@ class ModelEvaluator:
                 'metrics': metrics,
                 'confusion_matrix': confusion_matrix(y_test, y_pred),
                 'classification_report': classification_report(y_test, y_pred, 
-                                                             target_names=self.class_names[:len(np.unique(y_test))],
-                                                             zero_division=0)
+                target_names=self.class_names[:len(np.unique(y_test))],
+                zero_division=0)
             }
             
             return metrics

@@ -70,13 +70,14 @@ class MLModelTrainer:
                     'l1_ratio': [0.15, 0.5, 0.7, 0.9]  # For elasticnet
                 },
                 'description': """
-                **Logistic Regression** is a linear classification algorithm that uses the logistic function 
-                to model the probability of class membership. It's excellent for:
-                - Binary and multiclass classification
-                - When you need interpretable results
-                - Linear decision boundaries
-                - Fast training and prediction
-                - Feature importance through coefficients
+                **Logistic Regression** - A probabilistic algorithm that models the probability of class 
+                membership for Stars, Galaxies, and Quasars by applying the logistic function to linear 
+                combinations of features. This algorithm:
+                - Provides interpretable predictions for celestial object classification
+                - Enables fast probabilistic identification of astronomical objects
+                - Offers feature coefficient analysis for understanding object characteristics
+                - Serves as a baseline for comparing advanced algorithm performance
+                - Aligns with academic standards for linear classification methodologies
                 """
             },
             'random_forest': {
@@ -92,14 +93,15 @@ class MLModelTrainer:
                     'criterion': ['gini', 'entropy']
                 },
                 'description': """
-                **Random Forest** is an ensemble method that combines multiple decision trees using bagging.
-                It's excellent for:
-                - High accuracy on complex datasets
-                - Handling missing values and outliers
-                - Feature importance ranking
-                - Non-linear decision boundaries
-                - Robust to overfitting
-                - Works well with mixed data types
+                **Random Forest** - An ensemble learning algorithm that combines multiple decision trees 
+                using bagging to achieve robust predictions for Stars, Galaxies, and Quasars classification. 
+                This algorithm's working principles include:
+                - Bootstrap aggregating (bagging) multiple decision trees for ensemble robustness
+                - Feature importance ranking for identifying key astronomical characteristics
+                - Non-linear decision boundary learning for complex celestial object patterns
+                - Inherent handling of missing values and outliers in astronomical data
+                - Out-of-bag (OOB) error estimation without requiring separate validation sets
+                - Reduced overfitting through ensemble diversity, aligning with academic standards
                 """
             },
             'gradient_boosting': {
@@ -115,13 +117,15 @@ class MLModelTrainer:
                     'criterion': ['friedman_mse', 'squared_error']
                 },
                 'description': """
-                **Gradient Boosting** builds models sequentially, each correcting the errors of the previous one.
-                It's excellent for:
-                - High accuracy on structured data
-                - Handling non-linear relationships
-                - Feature importance analysis
-                - Works well with small to medium datasets
-                - Can be prone to overfitting if not tuned properly
+                **Gradient Boosting** - A sequential ensemble algorithm that builds models iteratively, 
+                with each new model correcting prediction errors of previous models. For celestial object 
+                prediction, this algorithm:
+                - Sequentially trains models to minimize residual errors in classifications
+                - Achieves high accuracy through iterative error correction and refinement
+                - Enables detailed feature importance analysis for astronomical data characteristics
+                - Learns complex non-linear relationships between photometric features and object types
+                - Implements learning rate control to balance model complexity and generalization
+                - Adheres to academic standards for gradient-based optimization methodologies
                 """
             },
             'extra_trees': {
@@ -139,7 +143,17 @@ class MLModelTrainer:
                     'C': [0.1, 1, 10, 100],
                     'kernel': ['rbf', 'poly', 'sigmoid'],
                     'gamma': ['scale', 'auto', 0.001, 0.01, 0.1]
-                }
+                },
+                'description': """
+                **Support Vector Machine (SVM)** - A powerful algorithm that finds optimal hyperplanes 
+                to separate different classes with maximum margin. For celestial object prediction, SVM:
+                - Identifies optimal decision boundaries separating Stars, Galaxies, and Quasars
+                - Employs kernel methods (RBF, polynomial, sigmoid) to handle non-linear feature spaces
+                - Maximizes margin between class boundaries for improved generalization
+                - Effectively handles high-dimensional astronomical feature spaces
+                - Provides robust probabilistic predictions for celestial object classification
+                - Represents a well-established algorithm in academic machine learning literature
+                """
             },
             'knn': {
                 'model': KNeighborsClassifier(n_jobs=-1),
@@ -147,7 +161,17 @@ class MLModelTrainer:
                     'n_neighbors': [3, 5, 7, 9, 11],
                     'weights': ['uniform', 'distance'],
                     'metric': ['euclidean', 'manhattan', 'minkowski']
-                }
+                },
+                'description': """
+                **K-Nearest Neighbors (KNN)** - A non-parametric algorithm that classifies celestial objects 
+                based on proximity of neighboring instances in the feature space. This algorithm:
+                - Identifies the k nearest neighbors in feature space for each object
+                - Assigns class labels based on majority voting among neighbors
+                - Captures local patterns and proximities in astronomical data
+                - Requires no explicit model training, enabling fast online learning
+                - Employs various distance metrics (Euclidean, Manhattan, Minkowski) for flexibility
+                - Aligns with academic standards for instance-based learning methodologies
+                """
             },
             'naive_bayes': {
                 'model': GaussianNB(),
@@ -162,7 +186,19 @@ class MLModelTrainer:
                     'min_samples_split': [2, 5, 10, 20],
                     'min_samples_leaf': [1, 2, 5, 10],
                     'criterion': ['gini', 'entropy']
-                }
+                },
+                'description': """
+                **Decision Tree** - A recursive partitioning algorithm that creates interpretable 
+                decision rules for classifying Stars, Galaxies, and Quasars. This algorithm:
+                - Recursively splits feature space based on optimal information gain/Gini impurity
+                - Generates interpretable decision rules and tree structures for celestial object classification
+                - Handles both categorical and continuous astronomical features natively
+                - Provides clear visualization of decision-making processes for academic analysis
+                - Captures non-linear relationships through hierarchical feature interactions
+                - Enables feature importance ranking based on split decisions
+                - Serves as the foundational algorithm for ensemble methods like Random Forest
+                - Represents a fundamental algorithm in academic machine learning methodologies
+                """
             }
         }
         

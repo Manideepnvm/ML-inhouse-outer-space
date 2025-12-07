@@ -1,4 +1,5 @@
 import os
+import glob
 import pandas as pd
 import numpy as np
 import streamlit as st
@@ -56,6 +57,36 @@ def load_and_process(csv_path: str):
     return data, data_clean, data_eng, feature_summary
 
 
+@st.cache_data(show_spinner=False)
+def load_and_process_files(csv_paths_tuple: tuple):
+    """
+    Load and process multiple CSV files, concatenate them with a source_file column.
+    Accepts a tuple of file paths (tuples are hashable so caching works).
+    Returns concatenated raw, cleaned, engineered dataframes and feature summary based on concatenated engineered df.
+    """
+    processor = AstronomicalDataProcessor()
+    dfs = []
+    for p in csv_paths_tuple:
+        d = processor.load_data(p)
+        if d is None:
+            continue
+        # keep track of source file
+        d['source_file'] = os.path.basename(p)
+        dfs.append(d)
+
+    if not dfs:
+        return None, None, None, None
+
+    # Concatenate raw data (union of columns)
+    data_concat = pd.concat(dfs, ignore_index=True, sort=False)
+
+    # Process concatenated data
+    data_clean = processor.clean_data(data_concat)
+    data_eng = processor.engineer_features(data_clean)
+    feature_summary = processor.create_feature_summary(data_eng)
+    return data_concat, data_clean, data_eng, feature_summary
+
+
 def get_object_color(obj_type):
     """Get color for object type with fallback"""
     return OBJECT_COLORS.get(obj_type, '#808080')  # Gray fallback
@@ -89,22 +120,34 @@ def main():
        
         """)
 
-    # Only read from data folder
-    default_path = os.path.join("data", "Skyserver_SQL2_27_2018_6_51_39_PM.csv")
-    
-    if not os.path.exists(default_path):
-        st.error(f"Data file not found: {default_path}")
-        st.info("Please ensure your Skyserver dataset is in the data/ folder with the correct filename.")
+    # Discover CSV files in data/ folder
+    csv_paths = sorted(glob.glob(os.path.join("data", "*.csv")))
+    if not csv_paths:
+        st.error("No CSV files found in data/ folder.")
+        st.info("Please add your dataset CSV files into the data/ directory.")
         return
 
+    # Sidebar: dataset selector (All concatenated or a single file)
+    basenames = [os.path.basename(p) for p in csv_paths]
+    dataset_options = ["All (concatenated)"] + basenames
+    selected = st.sidebar.selectbox("Dataset to view", options=dataset_options, index=0)
+
     with st.spinner("Loading and processing data..."):
-        data, data_clean, data_eng, feature_summary = load_and_process(default_path)
+        if selected == "All (concatenated)":
+            data, data_clean, data_eng, feature_summary = load_and_process_files(tuple(csv_paths))
+            used_files = basenames
+        else:
+            # find the full path for the selected basename
+            sel_path = next((p for p in csv_paths if os.path.basename(p) == selected), None)
+            data, data_clean, data_eng, feature_summary = load_and_process(sel_path)
+            used_files = [selected] if data is not None else []
 
     if data is None:
         st.error("Failed to load data.")
         return
 
     st.success(f"Loaded: {len(data):,} rows, {data.shape[1]} columns. After engineering: {data_eng.shape[1]} features.")
+    st.info(f"Files used: {', '.join(used_files)}")
 
     # Controls
     target_col = st.sidebar.selectbox("Target column", options=[c for c in data.columns if c in ("class", "Class", "target")] + list(data.columns), index=0)
@@ -124,7 +167,7 @@ def main():
 
     # Overview
     with tabs[0]:
-        st.subheader("📋 Data Overview")
+        st.subheader("📋 Data Ovrview")
         st.markdown("""
         This section provides a comprehensive view of the raw and processed astronomical data.
         """)
@@ -145,15 +188,6 @@ def main():
         st.subheader("⚙️ Engineered Data Sample")
         st.markdown("First 50 rows after feature engineering (new features added):")
         st.dataframe(data_eng.head(50))
-        
-        # Data quality information
-        st.subheader("🔍 Data Quality Assessment")
-        missing_data = data.isnull().sum()
-        if missing_data.sum() > 0:
-            st.warning(f"⚠️ Missing values detected: {missing_data.sum()} total missing values")
-            st.dataframe(missing_data[missing_data > 0].to_frame('Missing Count'))
-        else:
-            st.success("✅ No missing values in the dataset")
 
     # Color Indices
     with tabs[1]:
