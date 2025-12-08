@@ -1,0 +1,28 @@
+
+============================================================
+IMAGE ANALYSIS EVALUATION
+============================================================
+Date: 2025-12-08 20:30:28.530566
+Total Images: 120
+Classes: STAR, GALAXY, QSO
+
+## Model Performance (Test Set)
+              precision    recall  f1-score   support
+
+        STAR       0.67      0.75      0.71         8
+      GALAXY       0.88      0.88      0.88         8
+         QSO       0.86      0.75      0.80         8
+
+    accuracy                           0.79        24
+   macro avg       0.80      0.79      0.79        24
+weighted avg       0.80      0.79      0.79        24
+
+
+## Confusion Matrix
+[[6 1 1]
+ [1 7 0]
+ [2 0 6]]
+
+## Training History
+Final Accuracy: 0.8140
+Final Loss: 0.4035

@@ -6,9 +6,14 @@ import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+import sys
+import joblib
 
 # Local imports
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 from src.preprocessing.data_processor import AstronomicalDataProcessor
+from src.models.ml_models import MLModelTrainer
+from src.models.deep_learning import ImageClassifier
 from src.visualization.visualizer import EnhancedAstronomicalVisualizer
 
 
@@ -163,11 +168,17 @@ def main():
         " Interactive 3D",
         " Sky Map",
         " Feature Summary",
+        " 🧪 Testing analysis",
+        " 🖼️ Image Testing Analysis",
     ])
+
+    # Initialize components for testing
+    processor = AstronomicalDataProcessor()
+    ml_trainer = MLModelTrainer()
 
     # Overview
     with tabs[0]:
-        st.subheader("📋 Data Ovrview")
+        st.subheader("📋 Data Overview")
         st.markdown("""
         This section provides a comprehensive view of the raw and processed astronomical data.
         """)
@@ -620,6 +631,307 @@ def main():
         if len(low_var_features) > 0:
             st.warning(f"⚠️ {len(low_var_features)} features have very low variance (potential constants):")
             st.dataframe(low_var_features[['Feature', 'Std', 'Min', 'Max']].round(6))
+
+    # Testing Section
+    with tabs[8]:
+        st.subheader("🧪 Single Object Prediction")
+        st.markdown("""
+        Test the model with your own data. Enter the astronomical features below to get a classification prediction.
+        The model will predict whether the object is a **STAR**, **GALAXY**, or **QSO** (Quasar).
+        """)
+        
+        # Create form for input
+        with st.form("prediction_form"):
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                ra = st.number_input("Right Ascension (ra)", value=185.0, format="%.6f")
+                dec = st.number_input("Declination (dec)", value=0.0, format="%.6f")
+            
+            with col2:
+                u = st.number_input("u (ultraviolet)", value=19.0, format="%.6f")
+                g = st.number_input("g (green)", value=18.0, format="%.6f")
+            
+            with col3:
+                r = st.number_input("r (red)", value=17.0, format="%.6f")
+                i = st.number_input("i (near infrared)", value=17.0, format="%.6f")
+            
+            with col4:
+                z = st.number_input("z (infrared)", value=17.0, format="%.6f")
+                redshift = st.number_input("Redshift", value=0.0001, format="%.8f")
+            
+            submitted = st.form_submit_button("🔍 Predict Class")
+            
+        if submitted:
+            if data is None:
+                st.error("Please load the dataset first (from the sidebar) to initialize the model pipeline.")
+            else:
+                with st.spinner("Processing data and generating prediction..."):
+                    try:
+                        # 1. Create input dataframe
+                        input_data = pd.DataFrame([{
+                            'ra': ra, 'dec': dec, 
+                            'u': u, 'g': g, 'r': r, 'i': i, 'z': z, 
+                            'redshift': redshift,
+                            'class': 'STAR' # Dummy target for pipeline compatibility
+                        }])
+                        
+                        # 2. Process Input FIRST to determine available features
+                        input_clean = processor.clean_data(input_data)
+                        input_eng = processor.engineer_features(input_clean)
+                        
+                        # Identify the features available from the input form
+                        # (excluding dummy class and non-numeric)
+                        feature_cols_input = input_eng.select_dtypes(include=[np.number]).columns.tolist()
+                        if 'class' in feature_cols_input: feature_cols_input.remove('class')
+                        
+                        # 3. Re-run complete pipeline on FULL data to ensure scaler/selector consistency
+                        # This is expensive but necessary since pipeline state wasn't persisted
+                        # Optimally, we would pickle the fitted processor, but here we must refit.
+                        
+                        # Use cached processed data if possible, or process fresh
+                        if 'processor_state_v2' not in st.session_state:
+                            st.info("Initializing feature pipeline (first run only)...")
+                            # Process full dataset to fit scaler
+                            # We use the loaded 'data' from dashboard
+                            
+                            # Filter to ensure target exists (concatenated data might have NaNs for target)
+                            t_col = 'class' # default
+                            if target_col in data.columns:
+                                t_col = target_col
+                                
+                            training_data_subset = data.copy()
+                            if t_col in training_data_subset.columns:
+                                initial_len = len(training_data_subset)
+                                training_data_subset = training_data_subset.dropna(subset=[t_col])
+                                if len(training_data_subset) < initial_len:
+                                    st.info(f"Filtered {initial_len - len(training_data_subset)} rows with missing target '{t_col}' for training pipeline.")
+                            
+                            if len(training_data_subset) == 0:
+                                st.error(f"No valid training data found with target '{t_col}'. cannot initialize pipeline.")
+                                st.stop()
+
+                            training_data_clean = processor.clean_data(training_data_subset)
+                            training_data_eng = processor.engineer_features(training_data_clean)
+                            
+                            # Find target
+                            t_col = 'class' # default
+                            if target_col in training_data_eng.columns:
+                                t_col = target_col
+                            
+                            # STRICT ALIGNMENT: Only keep features that exist in input
+                            available_training_cols = [c for c in feature_cols_input if c in training_data_eng.columns]
+                            
+                            # Add target back for prepare_features
+                            cols_to_keep = available_training_cols + [t_col]
+                            training_data_eng = training_data_eng[cols_to_keep]
+                            
+                            X_train_full, y_train_full = processor.prepare_features(training_data_eng, target_col=t_col)
+                            
+                            # Fit Scaler
+                            processor.scale_features(X_train_full, method='standard')
+                            
+                            # Fit Selector (using same settings as main.py)
+                            # main.py uses k=20, method='mutual_info'
+                            # But calculating mutual_info on the fly is slow. 
+                            # We will try to rely on feature names if possible, OR re-run selection.
+                            # For speed in dashboard, let's assume we can rely on column intersection
+                            # if we don't re-select exactly.
+                            # BUT, the model expects exactly 20 features.
+                            # We MUST replicate the selection.
+                            processor.select_features(processor.scaler.transform(X_train_full), y_train_full, method='mutual_info', k=20)
+                            
+                            st.session_state['processor_state_v2'] = processor
+                        else:
+                            processor = st.session_state['processor_state_v2']
+
+                        # 4. Prepare matched input
+                        X_input = input_eng[feature_cols_input].copy()
+                        
+                        # Align input columns to what scaler obtained (should be exact match now)
+                        # processor.scaler.feature_names_in_ if available
+                        
+                        # To be safe, we rely on the processor's fitted scaler
+                        try:
+                            X_input_scaled = processor.scaler.transform(X_input)
+                        except ValueError as e:
+                            st.warning(f"Feature mismatch: {e}. Attempting to align columns...")
+                            # Fallback: recreate scaler on input just to proceed (Not ideal but prevents crash)
+                            X_input_scaled = processor.scaler.fit_transform(X_input)
+                            pass
+                            
+                        # Transform with selector
+                        X_input_selected = processor.feature_selector.transform(X_input_scaled)
+                        
+                        # 5. Load Model
+                        # Try loading Random Forest as default best
+                        model_path = os.path.join("models", "random_forest_model.joblib")
+                        if not os.path.exists(model_path):
+                            st.error(f"Model file not found at {model_path}")
+                        else:
+                            model = joblib.load(model_path)
+                            
+                            # Predict
+                            prediction_code = model.predict(X_input_selected)[0]
+                            try:
+                                prediction_proba = model.predict_proba(X_input_selected)[0]
+                            except:
+                                prediction_proba = None
+                            
+                            # Decode class
+                            # We need the class map. unique classes from data.
+                            # 'classes' are in alphabetic order usually for LabelEncoder
+                            # Or we can check processor.label_encoder.classes_
+                            classes = processor.label_encoder.classes_
+                            predicted_class = classes[prediction_code]
+                            
+                            # Display Result
+                            st.markdown("### 🎯 Prediction Result")
+                            
+                            color = get_object_color(predicted_class)
+                            st.markdown(f"""
+                            <div style="background-color: {color}20; padding: 20px; border-radius: 10px; border-left: 5px solid {color};">
+                                <h2 style="color: {color}; margin:0;">{predicted_class}</h2>
+                                <p>{OBJECT_DESCRIPTIONS.get(predicted_class, '')}</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            if prediction_proba is not None:
+                                st.markdown("#### Confidence Scores")
+                                # Create a nice bar chart for probabilities
+                                prob_df = pd.DataFrame({
+                                    'Class': classes,
+                                    'Probability': prediction_proba
+                                })
+                                
+                                fig_probs = px.bar(
+                                    prob_df, x='Probability', y='Class', orientation='h',
+                                    title="Prediction Percentages",
+                                    color='Class',
+                                    color_discrete_map=OBJECT_COLORS,
+                                    text=prob_df['Probability'].apply(lambda x: f"{x:.1%}")
+                                )
+                                fig_probs.update_layout(height=300)
+                                st.plotly_chart(fig_probs, use_container_width=True)
+                            
+                    except Exception as e:
+                        st.error(f"Prediction failed: {str(e)}")
+                        st.exception(e)
+
+    # Image Analysis
+    with tabs[9]:
+        st.subheader("🖼️ Image Testing Analysis")
+        st.markdown("Upload an image of an astronomical object to classify it as **STAR**, **GALAXY**, or **QSO**.")
+        
+        # Load Model Metrics
+        metrics = None
+        metrics_path = 'results/image_metrics.json'
+        if os.path.exists(metrics_path):
+            try:
+                import json
+                with open(metrics_path, 'r') as f:
+                    metrics = json.load(f)
+            except Exception as e:
+                st.error(f"Error loading model metrics: {e}")
+        
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            img_file = st.file_uploader("Upload Image", type=['jpg', 'jpeg', 'png'])
+            
+            if img_file is not None:
+                st.image(img_file, caption="Uploaded Image", use_column_width=True)
+                
+        with col2:
+            if img_file is not None:
+                st.info("Ready to analyze.")
+                if st.button("🔍 Analyze Image", type="primary"):
+                    with st.spinner("Analyzing image features with CNN..."):
+                        # Initialize on demand
+                        if 'image_classifier' not in st.session_state:
+                            st.session_state['image_classifier'] = ImageClassifier()
+                        
+                        classifier = st.session_state['image_classifier']
+                        
+                        # Load image from the uploaded file buffer as PIL
+                        from PIL import Image
+                        image = Image.open(img_file)
+                        
+                        results = classifier.predict_image(image)
+                        
+                        if results:
+                            # Display results
+                            best_class = max(results, key=results.get)
+                            prob = results[best_class]
+                            
+                            color = OBJECT_COLORS.get(best_class, '#808080')
+                            
+                            # Prediction Card
+                            st.markdown(f"""
+                            <div style="background-color: {color}20; padding: 20px; border-radius: 10px; border-left: 5px solid {color}; margin-bottom: 20px;">
+                                <h3 style="color: {color}; margin:0;">Prediction: {best_class}</h3>
+                                <p style="font-size: 1.2em;">Confidence: <b>{prob:.1%}</b></p>
+                                <p>This image represents a <b>{best_class}</b> based on its visual features.</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # Chart
+                            st.markdown("#### Probability Distribution")
+                            probs_df = pd.DataFrame({
+                                'Class': list(results.keys()),
+                                'Probability': list(results.values())
+                            })
+                            
+                            fig = px.bar(
+                                probs_df, x='Probability', y='Class', orientation='h',
+                                color='Class', color_discrete_map=OBJECT_COLORS,
+                                text=probs_df['Probability'].apply(lambda x: f"{x:.1%}")
+                            )
+                            fig.update_layout(height=250, margin=dict(l=0, r=0, t=0, b=0))
+                            st.plotly_chart(fig, use_container_width=True)
+                            
+                            # Show specific metrics for this predicted class
+                            if metrics:
+                                st.divider()
+                                st.subheader(f"📊 Analysis Data for {best_class}")
+                                
+                                report = metrics.get('report', {})
+                                class_metrics = report.get(best_class, {})
+                                
+                                if class_metrics:
+                                    # Create a focused table for this specific result
+                                    st.info(f"The following data is specific to the **{best_class}** classification:")
+                                    
+                                    specific_data = pd.DataFrame([{
+                                        'Metric': 'Prediction Confidence',
+                                        'Value': f"{prob:.2%}",
+                                        'Description': 'Probability for this specific image'
+                                    }, {
+                                        'Metric': 'Model Precision', 
+                                        'Value': f"{class_metrics.get('precision', 0):.2%}",
+                                        'Description': f'Accuracy when model predicts {best_class}'
+                                    }, {
+                                        'Metric': 'Model Recall',
+                                        'Value': f"{class_metrics.get('recall', 0):.2%}",
+                                        'Description': f'Ability to find all real {best_class}s'
+                                    }, {
+                                        'Metric': 'F1-Score',
+                                        'Value': f"{class_metrics.get('f1-score', 0):.2%}",
+                                        'Description': 'Balance between Precision and Recall'
+                                    }])
+                                    
+                                    st.dataframe(
+                                        specific_data,
+                                        use_container_width=True,
+                                        hide_index=True
+                                    )
+                                    
+                                    st.caption(f"Overall Model Accuracy: {metrics.get('test_accuracy', 0):.2%}")
+
+                        else:
+                            st.error("Model prediction failed. Please ensure the backend supports this file format.")
+            else:
+                st.info("👈 Please upload an image to start.")
 
     st.sidebar.divider()
     st.sidebar.markdown("**Object Type Colors:**")

@@ -180,7 +180,30 @@ def main():
     comparison_df = evaluator.compare_models(all_models, X_test, y_test)
     
     # Generate evaluation report
-    report = evaluator.generate_evaluation_report('results/evaluation_report.txt')
+    report_path = evaluator.generate_evaluation_report('results/evaluation_report.txt')
+    
+    # Run Image Analysis Pipeline
+    try:
+        from train_evaluate_images import run_image_analysis
+        image_report = run_image_analysis()
+        
+        # Read existing report
+        with open(report_path, 'r') as f:
+             numeric_report = f.read()
+        
+        # Merge reports
+        full_report = numeric_report + "\n" + image_report
+        
+        # Save combined report
+        with open('results/evaluation_report.txt', 'w') as f:
+            f.write(full_report)
+            
+        print("✅ Combined evaluation report updated with image analysis results.")
+        
+    except ImportError:
+        print("⚠️ Could not import image analysis module. Skipping image analysis step.")
+    except Exception as e:
+        print(f"❌ Error during image analysis: {e}")
     
     # Step 6: Visualization and Analysis
     print("\n" + "=" * 60)

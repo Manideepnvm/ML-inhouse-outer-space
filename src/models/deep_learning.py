@@ -9,16 +9,21 @@ from sklearn.preprocessing import LabelEncoder
 try:
     import tensorflow as tf
     from tensorflow import keras
-    from tensorflow import keras
-    from tensorflow import keras
-    from tensorflow import layers, models, callbacks, optimizers
-    from keras.utils import to_categorical
+    
+    # Safe aliases via tf.keras
+    layers = tf.keras.layers
+    models = tf.keras.models
+    callbacks = tf.keras.callbacks
+    optimizers = tf.keras.optimizers
+    to_categorical = tf.keras.utils.to_categorical
+    
     TENSORFLOW_AVAILABLE = True
     
     # Set TensorFlow logging level
     tf.get_logger().setLevel('ERROR')
     
-except ImportError:
+except ImportError as e:
+    print(f"TensorFlow import error: {e}")
     TENSORFLOW_AVAILABLE = False
 
 # PyTorch imports with error handling
@@ -1091,5 +1096,119 @@ class DeepLearningTrainer:
         )
         
         return ensemble_model
+
+
+class ImageClassifier:
+    """
+    Deep learning based image classifier for astronomical objects.
+    """
+    
+    def __init__(self, model_path='models/image_model.h5'):
+        self.model_path = model_path
+        self.model = None
+        self.img_size = (64, 64)
+        self.class_names = ['STAR', 'GALAXY', 'QSO']
+        
+    def build_model(self):
+        """Build a simple CNN for astronomical classification"""
+        if not TENSORFLOW_AVAILABLE:
+            print("❌ TensorFlow not available")
+            return None
+            
+        try:
+            model = models.Sequential([
+                layers.Input(shape=(64, 64, 3)),
+                # Block 1
+                layers.Conv2D(32, (3, 3), activation='relu', padding='same'),
+                layers.MaxPooling2D((2, 2)),
+                
+                # Block 2
+                layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
+                layers.MaxPooling2D((2, 2)),
+                
+                # Block 3
+                layers.Conv2D(64, (3, 3), activation='relu', padding='same'),
+                layers.MaxPooling2D((2, 2)),
+                
+                layers.Flatten(),
+                layers.Dense(64, activation='relu'),
+                layers.Dropout(0.5),
+                layers.Dense(3, activation='softmax') # Star, Galaxy, Quasar
+            ])
+            
+            model.compile(optimizer='adam',
+                        loss='categorical_crossentropy',
+                        metrics=['accuracy'])
+            self.model = model
+            return model
+        except Exception as e:
+            print(f"Error building model: {e}")
+            return None
+
+    def load_model(self):
+        """Load trained model or create new one"""
+        if not TENSORFLOW_AVAILABLE: return False
+        
+        if os.path.exists(self.model_path):
+            try:
+                self.model = models.load_model(self.model_path)
+                # print(f"✅ Loaded image model from {self.model_path}")
+                return True
+            except Exception as e:
+                print(f"❌ Error loading model: {e}")
+                self.build_model()
+                return False
+        else:
+            # print("ℹ️ No saved model found. Initializing new architecture.")
+            self.build_model()
+            return False
+
+    def predict_image(self, image_input):
+        """
+        Predict class for a single image.
+        Args:
+            image_input: PIL Image or numpy array or path
+        Returns:
+            dict: {class_name: probability}
+        """
+        if self.model is None:
+            self.load_model()
+            if self.model is None: return None
+
+        # Preprocess
+        try:
+            img_array = None
+            
+            # Handle PIL Image (streamlit upload returns PIL image via Image.open)
+            if hasattr(image_input, 'resize'):
+                if image_input.mode != 'RGB':
+                    image_input = image_input.convert('RGB')
+                img = image_input.resize(self.img_size)
+                img_array = keras.preprocessing.image.img_to_array(img)
+                
+            # Handle numpy
+            elif isinstance(image_input, np.ndarray):
+                img_array = tf.image.resize(image_input, self.img_size).numpy()
+                
+            else:
+                return None
+                
+            # Normalize
+            img_array = img_array / 255.0
+            img_batch = np.expand_dims(img_array, axis=0)
+            
+            # Predict
+            preds = self.model.predict(img_batch, verbose=0)[0]
+            
+            # Map to classes
+            result = {
+                self.class_names[i]: float(preds[i]) 
+                for i in range(len(self.class_names))
+            }
+            return result
+            
+        except Exception as e:
+            print(f"Prediction error: {e}")
+            return None
 
             
