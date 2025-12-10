@@ -14,6 +14,7 @@ from src.visualization.visualizer import EnhancedAstronomicalVisualizer
 from sklearn.model_selection import train_test_split
 import pandas as pd
 import numpy as np
+from src import config
 
 def main():
     """
@@ -28,20 +29,16 @@ def main():
     visualizer = EnhancedAstronomicalVisualizer()
     
     # Configuration - Optimized for faster training
-    config = {
-        'data_path': 'data/Skyserver_SQL2_27_2018_6_51_39_PM.csv',
-        'target_col': 'class',
-        'test_size': 0.2,
-        'random_state': 42,
-        'cv_folds': 3,  # Reduced from 5 to 3 for faster training
-        'deep_learning_epochs': 20,  # Reduced from 50 to 20 for faster training
-        'deep_learning_batch_size': 64,  # Increased batch size for faster training
-        'quick_mode': True,  # Enable quick mode for faster training
-        'max_features': 20  # Limit features for faster training
-    }
+    # Configuration - Optimized for faster training
+    # We use the config module but allow local overrides for main execution if needed
+    local_config = config.MODEL_CONFIG.copy()
+    local_config.update({
+        'data_path': config.MAIN_DATA_PATH,
+        'target_col': config.TARGET_COL,
+    })
     
     print("📋 Configuration:")
-    for key, value in config.items():
+    for key, value in local_config.items():
         print(f"   {key}: {value}")
     print()
     
@@ -51,14 +48,16 @@ def main():
     
     
     # Check if data file exists
-    if not os.path.exists(config['data_path']):
-        print(f"❌ Data file not found: {config['data_path']}")
-        print("Please place your Skyserver dataset in the data/ directory.")
-        print("Expected filename: Skyserver_SQL2_27_2018_6_51_39_PM.csv")
+    # Check if data file exists
+    if not os.path.exists(local_config['data_path']):
+        print(f"❌ Data file not found: {local_config['data_path']}")
+        print(f"Please place your Skyserver dataset in {config.DATA_DIR}")
+        print(f"Expected filename: {config.MAIN_DATA_FILENAME}")
         return
     
     # Load data
-    data = processor.load_data(config['data_path'])
+    # Load data
+    data = processor.load_data(local_config['data_path'])
     if data is None:
         print("❌ Failed to load data. Exiting.")
         return
@@ -106,12 +105,16 @@ def main():
     X_scaled = processor.scale_features(X, method='standard')
     
     # Feature selection - Reduced for faster training
-    X_selected = processor.select_features(X_scaled, y, method='mutual_info', k=config['max_features'])
+    X_selected = processor.select_features(X_scaled, y, method='mutual_info', k=local_config['max_features'])
+
+    # Save the fitted processor state for the dashboard
+    processor.save_pipeline(config.PROCESSOR_STATE_PATH)
     
     # Split data
+    # Split data
     X_train, X_test, y_train, y_test = train_test_split(
-        X_selected, y, test_size=config['test_size'], 
-        random_state=config['random_state'], stratify=y
+        X_selected, y, test_size=local_config['test_size'], 
+        random_state=local_config['random_state'], stratify=y
     )
     
     print(f"\n✅ Data preprocessing completed!")
@@ -125,21 +128,21 @@ def main():
     print("=" * 60)
     
     # Train ML models - Quick mode for faster training
-    if config['quick_mode']:
+    if local_config['quick_mode']:
         print("🚀 Quick Mode: Training only best performing models...")
         # Train only the most effective models for faster execution
         quick_models = ['logistic_regression', 'random_forest', 'xgboost', 'lightgbm', 'gradient_boosting']
         ml_models = ml_trainer.train_quick_models(
-            X_train, y_train, model_names=quick_models, cv=config['cv_folds']
+            X_train, y_train, model_names=quick_models, cv=local_config['cv_folds']
         )
     else:
         # Train all ML models
         ml_models = ml_trainer.train_all_models(
-            X_train, y_train, cv=config['cv_folds']
+            X_train, y_train, cv=local_config['cv_folds']
         )
     
     # Save ML models
-    ml_trainer.save_models('models/')
+    ml_trainer.save_models(config.MODELS_DIR)
     
     # Step 4: Deep Learning
     print("\n" + "=" * 60)
@@ -147,24 +150,25 @@ def main():
     print("=" * 60)
     
     # Train deep learning models - Quick mode for faster training
-    if config['quick_mode']:
+    # Train deep learning models - Quick mode for faster training
+    if local_config['quick_mode']:
         print("🚀 Quick Mode: Training only essential deep learning models...")
         # Train only the most effective DL models for faster execution
         dl_models = dl_trainer.train_quick_dl_models(
             X_train, y_train, 
-            epochs=config['deep_learning_epochs'],
-            batch_size=config['deep_learning_batch_size']
+            epochs=local_config['deep_learning_epochs'],
+            batch_size=local_config['deep_learning_batch_size']
         )
     else:
         # Train all deep learning models
         dl_models = dl_trainer.train_all_models(
             X_train, y_train, 
-            epochs=config['deep_learning_epochs'],
-            batch_size=config['deep_learning_batch_size']
+            epochs=local_config['deep_learning_epochs'],
+            batch_size=local_config['deep_learning_batch_size']
         )
     
     # Save DL models
-    dl_trainer.save_models('models/')
+    dl_trainer.save_models(config.MODELS_DIR)
     
     # Step 5: Model Evaluation
     print("\n" + "=" * 60)
@@ -180,7 +184,8 @@ def main():
     comparison_df = evaluator.compare_models(all_models, X_test, y_test)
     
     # Generate evaluation report
-    report_path = evaluator.generate_evaluation_report('results/evaluation_report.txt')
+    # Generate evaluation report
+    report_path = evaluator.generate_evaluation_report(config.EVALUATION_REPORT_PATH)
     
     # Run Image Analysis Pipeline
     try:
@@ -195,7 +200,7 @@ def main():
         full_report = numeric_report + "\n" + image_report
         
         # Save combined report
-        with open('results/evaluation_report.txt', 'w') as f:
+        with open(config.EVALUATION_REPORT_PATH, 'w') as f:
             f.write(full_report)
             
         print("✅ Combined evaluation report updated with image analysis results.")
@@ -263,8 +268,8 @@ def main():
     
     # Save dashboard as HTML
     if dashboard:
-        dashboard.write_html('results/interactive_dashboard.html')
-        print("💾 Interactive dashboard saved to results/interactive_dashboard.html")
+        dashboard.write_html(os.path.join(config.RESULTS_DIR, 'interactive_dashboard.html'))
+        print(f"💾 Interactive dashboard saved to {os.path.join(config.RESULTS_DIR, 'interactive_dashboard.html')}")
     
     print("\n🎉 PIPELINE COMPLETED SUCCESSFULLY!")
     print("=" * 60)
@@ -305,7 +310,7 @@ def run_quick_demo():
 if __name__ == "__main__":
     try:
         # Check if data exists, otherwise run demo
-        if not os.path.exists('data/Skyserver_SQL2_27_2018_6_51_39_PM.csv'):
+        if not os.path.exists(config.MAIN_DATA_PATH):
             print("⚠️ Main dataset not found. Creating sample data for demo...")
             run_quick_demo()
             print("\n📝 To use your own data:")

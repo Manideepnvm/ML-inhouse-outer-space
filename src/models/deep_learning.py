@@ -90,9 +90,9 @@ class DeepLearningTrainer:
             model.add(layers.Dropout(dropout_rate, name=f'dropout_{i+1}'))
             
             # Add residual connection if dimensions match
-            if i > 0 and units == hidden_layers[i-1]:
-                # This is a simplified residual connection
-                pass
+            # if i > 0 and units == hidden_layers[i-1]:
+            #     # Residual connection implementation would go here
+            #     pass
         
         # Output layer
         if self.num_classes == 2:

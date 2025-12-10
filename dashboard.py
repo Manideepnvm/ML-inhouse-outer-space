@@ -15,39 +15,15 @@ from src.preprocessing.data_processor import AstronomicalDataProcessor
 from src.models.ml_models import MLModelTrainer
 from src.models.deep_learning import ImageClassifier
 from src.visualization.visualizer import EnhancedAstronomicalVisualizer
+from src import config
 
 
 st.set_page_config(page_title="Astronomy Data Dashboard", layout="wide")
 
 # Comprehensive color mapping for different object types
-OBJECT_COLORS = {
-    # Primary object types (as they appear in the dataset)
-    'STAR': '#FFD700',      # Gold - represents stellar objects
-    'GALAXY': '#4169E1',    # Royal Blue - represents galaxies
-    'QSO': '#DC143C',       # Crimson - represents quasars
-    
-    # Alternative naming conventions
-    'Star': '#FFD700',
-    'Galaxy': '#4169E1', 
-    'Quasar': '#DC143C',
-    
-    # Numeric encodings (if target is encoded)
-    0: '#FFD700',           # Star
-    1: '#4169E1',           # Galaxy
-    2: '#DC143C',           # Quasar
-    
-    # Additional astronomical object types
-    'GALAXY_ACTIVE': '#8A2BE2',  # Blue Violet for active galaxies
-    'STAR_BINARY': '#FFA500',    # Orange for binary stars
-    'QSO_BL_LAC': '#FF1493',     # Deep Pink for BL Lac objects
-}
-
-# Object type descriptions for better understanding
-OBJECT_DESCRIPTIONS = {
-    'STAR': 'Stars are luminous celestial bodies that generate energy through nuclear fusion in their cores. They appear as point sources of light.',
-    'GALAXY': 'Galaxies are massive collections of stars, gas, dust, and dark matter bound together by gravity. They can contain billions of stars.',
-    'QSO': 'Quasars (Quasi-Stellar Objects) are extremely luminous active galactic nuclei powered by supermassive black holes at their centers.'
-}
+# Comprehensive color mapping for different object types
+OBJECT_COLORS = config.OBJECT_COLORS
+OBJECT_DESCRIPTIONS = config.OBJECT_DESCRIPTIONS
 
 
 @st.cache_data(show_spinner=False)
@@ -126,10 +102,10 @@ def main():
         """)
 
     # Discover CSV files in data/ folder
-    csv_paths = sorted(glob.glob(os.path.join("data", "*.csv")))
+    csv_paths = sorted(glob.glob(os.path.join(config.DATA_DIR, "*.csv")))
     if not csv_paths:
-        st.error("No CSV files found in data/ folder.")
-        st.info("Please add your dataset CSV files into the data/ directory.")
+        st.error(f"No CSV files found in {config.DATA_DIR} folder.")
+        st.info(f"Please add your dataset CSV files into the {config.DATA_DIR} directory.")
         return
 
     # Sidebar: dataset selector (All concatenated or a single file)
@@ -690,58 +666,60 @@ def main():
                         # Optimally, we would pickle the fitted processor, but here we must refit.
                         
                         # Use cached processed data if possible, or process fresh
+                        # Use cached processed data if possible, or process fresh
                         if 'processor_state_v2' not in st.session_state:
-                            st.info("Initializing feature pipeline (first run only)...")
-                            # Process full dataset to fit scaler
-                            # We use the loaded 'data' from dashboard
-                            
-                            # Filter to ensure target exists (concatenated data might have NaNs for target)
-                            t_col = 'class' # default
-                            if target_col in data.columns:
-                                t_col = target_col
+                            # OPTIMIZATION: Try to load pre-trained pipeline first
+                            if processor.load_pipeline(config.PROCESSOR_STATE_PATH):
+                                st.success("✅ Loaded pre-trained pipeline state!")
+                                st.session_state['processor_state_v2'] = processor
+                            else:
+                                st.warning("⚠️ Pre-trained pipeline not found. Falling back to slow training...")
+                                st.info("Initializing feature pipeline (training on full dataset)...")
+                                # Process full dataset to fit scaler
+                                # We use the loaded 'data' from dashboard
                                 
-                            training_data_subset = data.copy()
-                            if t_col in training_data_subset.columns:
-                                initial_len = len(training_data_subset)
-                                training_data_subset = training_data_subset.dropna(subset=[t_col])
-                                if len(training_data_subset) < initial_len:
-                                    st.info(f"Filtered {initial_len - len(training_data_subset)} rows with missing target '{t_col}' for training pipeline.")
-                            
-                            if len(training_data_subset) == 0:
-                                st.error(f"No valid training data found with target '{t_col}'. cannot initialize pipeline.")
-                                st.stop()
-
-                            training_data_clean = processor.clean_data(training_data_subset)
-                            training_data_eng = processor.engineer_features(training_data_clean)
-                            
-                            # Find target
-                            t_col = 'class' # default
-                            if target_col in training_data_eng.columns:
-                                t_col = target_col
-                            
-                            # STRICT ALIGNMENT: Only keep features that exist in input
-                            available_training_cols = [c for c in feature_cols_input if c in training_data_eng.columns]
-                            
-                            # Add target back for prepare_features
-                            cols_to_keep = available_training_cols + [t_col]
-                            training_data_eng = training_data_eng[cols_to_keep]
-                            
-                            X_train_full, y_train_full = processor.prepare_features(training_data_eng, target_col=t_col)
-                            
-                            # Fit Scaler
-                            processor.scale_features(X_train_full, method='standard')
-                            
-                            # Fit Selector (using same settings as main.py)
-                            # main.py uses k=20, method='mutual_info'
-                            # But calculating mutual_info on the fly is slow. 
-                            # We will try to rely on feature names if possible, OR re-run selection.
-                            # For speed in dashboard, let's assume we can rely on column intersection
-                            # if we don't re-select exactly.
-                            # BUT, the model expects exactly 20 features.
-                            # We MUST replicate the selection.
-                            processor.select_features(processor.scaler.transform(X_train_full), y_train_full, method='mutual_info', k=20)
-                            
-                            st.session_state['processor_state_v2'] = processor
+                                # Filter to ensure target exists (concatenated data might have NaNs for target)
+                                t_col = 'class' # default
+                                if target_col in data.columns:
+                                    t_col = target_col
+                                    
+                                training_data_subset = data.copy()
+                                if t_col in training_data_subset.columns:
+                                    initial_len = len(training_data_subset)
+                                    training_data_subset = training_data_subset.dropna(subset=[t_col])
+                                    if len(training_data_subset) < initial_len:
+                                        st.info(f"Filtered {initial_len - len(training_data_subset)} rows with missing target '{t_col}' for training pipeline.")
+                                
+                                if len(training_data_subset) == 0:
+                                    st.error(f"No valid training data found with target '{t_col}'. cannot initialize pipeline.")
+                                    st.stop()
+    
+                                training_data_clean = processor.clean_data(training_data_subset)
+                                training_data_eng = processor.engineer_features(training_data_clean)
+                                
+                                # Find target
+                                t_col = 'class' # default
+                                if target_col in training_data_eng.columns:
+                                    t_col = target_col
+                                
+                                # STRICT ALIGNMENT: Only keep features that exist in input
+                                available_training_cols = [c for c in feature_cols_input if c in training_data_eng.columns]
+                                
+                                # Add target back for prepare_features
+                                cols_to_keep = available_training_cols + [t_col]
+                                training_data_eng = training_data_eng[cols_to_keep]
+                                
+                                X_train_full, y_train_full = processor.prepare_features(training_data_eng, target_col=t_col)
+                                
+                                # Fit Scaler
+                                processor.scale_features(X_train_full, method='standard')
+                                
+                                # Fit Selector
+                                processor.select_features(processor.scaler.transform(X_train_full), y_train_full, method='mutual_info', k=20)
+                                
+                                st.session_state['processor_state_v2'] = processor
+                                # Save for next time
+                                processor.save_pipeline(config.PROCESSOR_STATE_PATH)
                         else:
                             processor = st.session_state['processor_state_v2']
 
@@ -765,7 +743,7 @@ def main():
                         
                         # 5. Load Model
                         # Try loading Random Forest as default best
-                        model_path = os.path.join("models", "random_forest_model.joblib")
+                        model_path = os.path.join(config.MODELS_DIR, "random_forest_model.joblib")
                         if not os.path.exists(model_path):
                             st.error(f"Model file not found at {model_path}")
                         else:
@@ -825,7 +803,7 @@ def main():
         
         # Load Model Metrics
         metrics = None
-        metrics_path = 'results/image_metrics.json'
+        metrics_path = config.IMAGE_METRICS_PATH
         if os.path.exists(metrics_path):
             try:
                 import json

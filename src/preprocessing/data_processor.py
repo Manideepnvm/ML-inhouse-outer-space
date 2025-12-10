@@ -509,3 +509,51 @@ class AstronomicalDataProcessor:
         except Exception as e:
             print(f"❌ Error loading processed data: {e}")
             return None
+
+    def save_pipeline(self, file_path):
+        """
+        Save the fitted processor state (scaler, encoder, selector, imputer) to a file.
+        
+        Args:
+            file_path (str): Path to save the pipeline
+        """
+        import joblib
+        pipeline_state = {
+            'scaler': self.scaler,
+            'label_encoder': self.label_encoder,
+            'feature_selector': self.feature_selector,
+            'imputer': self.imputer
+        }
+        try:
+            joblib.dump(pipeline_state, file_path)
+            print(f"💾 Pipeline state saved to: {file_path}")
+        except Exception as e:
+            print(f"❌ Error saving pipeline state: {e}")
+
+    def load_pipeline(self, file_path):
+        """
+        Load a fitted processor state.
+        
+        Args:
+            file_path (str): Path to load the pipeline from
+        
+        Returns:
+            bool: True if loaded successfully, False otherwise
+        """
+        import joblib
+        import os
+        if not os.path.exists(file_path):
+            print(f"❌ Pipeline file not found: {file_path}")
+            return False
+            
+        try:
+            pipeline_state = joblib.load(file_path)
+            self.scaler = pipeline_state.get('scaler')
+            self.label_encoder = pipeline_state.get('label_encoder')
+            self.feature_selector = pipeline_state.get('feature_selector')
+            self.imputer = pipeline_state.get('imputer')
+            print(f"✅ Pipeline state loaded from: {file_path}")
+            return True
+        except Exception as e:
+            print(f"❌ Error loading pipeline state: {e}")
+            return False

@@ -11,6 +11,7 @@ from sklearn.metrics import classification_report, confusion_matrix
 # Add src to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
 from src.models.deep_learning import ImageClassifier
+from src import config
 
 def load_dataset(data_dir):
     """Load images from Galaxy, quasers, stars folders"""
@@ -19,14 +20,7 @@ def load_dataset(data_dir):
     class_names = ['STAR', 'GALAXY', 'QSO']
     
     # Map folder names to class names
-    # Folder structure: data/Galaxy, data/quasers, data/stars
-    # Target classes: STAR, GALAXY, QSO
-    
-    mapping = {
-        'stars': 'STAR', 
-        'Galaxy': 'GALAXY', 
-        'quasers': 'QSO'
-    }
+    mapping = config.IMAGE_CLASS_MAPPING
     
     img_size = (64, 64)
     
@@ -64,7 +58,7 @@ def load_dataset(data_dir):
     
     return X, y_encoded, class_names
 
-def run_image_analysis(data_dir="data"):
+def run_image_analysis(data_dir=None):
     """
     Run the complete image analysis pipeline: load, train, evaluate.
     Returns:
@@ -75,7 +69,9 @@ def run_image_analysis(data_dir="data"):
     print("=" * 60)
     
     # Ensure absolute path for data_dir
-    if not os.path.isabs(data_dir):
+    if data_dir is None:
+        data_dir = config.DATA_DIR
+    elif not os.path.isabs(data_dir):
         # Assuming data_dir is relative to project root
         project_root = os.path.dirname(os.path.abspath(__file__))
         data_dir = os.path.join(project_root, data_dir)
@@ -114,10 +110,10 @@ def run_image_analysis(data_dir="data"):
     )
     
     # Save trained model
-    models_dir = os.path.join(os.path.dirname(data_dir), 'models')
-    os.makedirs(models_dir, exist_ok=True)
-    model.save(os.path.join(models_dir, 'image_model.h5'))
-    print("Image model saved to models/image_model.h5")
+    # Save trained model
+    os.makedirs(config.MODELS_DIR, exist_ok=True)
+    model.save(os.path.join(config.MODELS_DIR, 'image_model.h5'))
+    print(f"Image model saved to {os.path.join(config.MODELS_DIR, 'image_model.h5')}")
     
     # Evaluate
     print("Evaluating image model...")
@@ -138,9 +134,9 @@ def run_image_analysis(data_dir="data"):
         'report': report_dict
     }
     
-    with open('results/image_metrics.json', 'w') as f:
+    with open(config.IMAGE_METRICS_PATH, 'w') as f:
         json.dump(metrics_data, f, indent=4)
-    print("Metrics saved to results/image_metrics.json")
+    print(f"Metrics saved to {config.IMAGE_METRICS_PATH}")
     
     # Generate Report Content
     report_content = f"""

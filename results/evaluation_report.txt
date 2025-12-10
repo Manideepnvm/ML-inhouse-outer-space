@@ -1,15 +1,15 @@
 ASTRONOMICAL OBJECT CLASSIFICATION - EVALUATION REPORT
 ======================================================================
 
-Report generated: 2025-12-08 20:12:06.702818
+Report generated: 2025-12-09 13:46:25.925758
 
 MODEL PERFORMANCE SUMMARY
 ------------------------------
               Model  Accuracy  Precision  Recall  F1-Score  ROC-AUC
       random_forest    0.9931     0.9931  0.9931    0.9918   0.9982
            lightgbm    0.9924     0.9918  0.9924    0.9920   0.9989
-        pytorch_mlp    0.9918     0.9914  0.9918    0.9912   0.9977
             xgboost    0.9912     0.9906  0.9912    0.9907   0.9986
+        pytorch_mlp    0.9912     0.9910  0.9912    0.9910   0.9979
 logistic_regression    0.9905     0.9900  0.9905    0.9897   0.9975
   gradient_boosting    0.9887     0.9874  0.9887    0.9880   0.9960
            dense_nn    0.0000     0.0000  0.0000    0.0000   0.0000
@@ -129,21 +129,21 @@ weighted avg       0.99      0.99      0.99      1586
 
 Model: pytorch_mlp
 ====================
-Accuracy: 0.9918
-Precision: 0.9914
-Recall: 0.9918
-F1-Score: 0.9912
-ROC-AUC: 0.9977
+Accuracy: 0.9912
+Precision: 0.9910
+Recall: 0.9912
+F1-Score: 0.9910
+ROC-AUC: 0.9979
 
 Classification Report:
               precision    recall  f1-score   support
 
         STAR       0.99      0.99      0.99       928
-      GALAXY       0.86      0.50      0.63        12
-         QSO       0.99      1.00      0.99       646
+      GALAXY       0.64      0.58      0.61        12
+         QSO       0.99      1.00      1.00       646
 
     accuracy                           0.99      1586
-   macro avg       0.95      0.83      0.87      1586
+   macro avg       0.87      0.86      0.87      1586
 weighted avg       0.99      0.99      0.99      1586
 
 --------------------------------------------------
@@ -153,27 +153,27 @@ weighted avg       0.99      0.99      0.99      1586
 ============================================================
 IMAGE ANALYSIS EVALUATION
 ============================================================
-Date: 2025-12-08 20:12:13.728954
+Date: 2025-12-09 13:46:32.346532
 Total Images: 120
 Classes: STAR, GALAXY, QSO
 
 ## Model Performance (Test Set)
               precision    recall  f1-score   support
 
-        STAR       1.00      0.50      0.67         8
-      GALAXY       0.80      1.00      0.89         8
-         QSO       0.70      0.88      0.78         8
+        STAR       0.86      0.75      0.80         8
+      GALAXY       0.88      0.88      0.88         8
+         QSO       0.78      0.88      0.82         8
 
-    accuracy                           0.79        24
-   macro avg       0.83      0.79      0.78        24
-weighted avg       0.83      0.79      0.78        24
+    accuracy                           0.83        24
+   macro avg       0.84      0.83      0.83        24
+weighted avg       0.84      0.83      0.83        24
 
 
 ## Confusion Matrix
-[[4 1 3]
- [0 8 0]
- [0 1 7]]
+[[6 1 1]
+ [0 7 1]
+ [1 0 7]]
 
 ## Training History
-Final Accuracy: 0.8605
-Final Loss: 0.3297
+Final Accuracy: 0.8372
+Final Loss: 0.3564
