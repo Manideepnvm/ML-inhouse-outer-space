@@ -188,9 +188,13 @@ def main():
     report_path = evaluator.generate_evaluation_report(config.EVALUATION_REPORT_PATH)
     
     # Run Image Analysis Pipeline
+    image_report = ""
     try:
         from train_evaluate_images import run_image_analysis
         image_report = run_image_analysis()
+        
+        # Print image report to console
+        print(image_report)
         
         # Read existing report
         with open(report_path, 'r') as f:

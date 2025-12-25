@@ -97,6 +97,25 @@ class AstronomicalDataProcessor:
         print("-" * 40)
         
         data_clean = data.copy()
+        
+        # 0. Normalization of Class Names (Critical Fix)
+        if 'class' in data_clean.columns:
+            # Standardize to uppercase first
+            data_clean['class'] = data_clean['class'].astype(str).str.upper().str.strip()
+            
+            # Robust mapping for variations
+            class_map = {
+                'STARS': 'STAR', 'STAR': 'STAR',
+                'GALAXIES': 'GALAXY', 'GALAXY': 'GALAXY', 'GAL': 'GALAXY',
+                'QUASARS': 'QSO', 'QUASAR': 'QSO', 'QSO': 'QSO', 'QUASERS': 'QSO', 'QUASER': 'QSO'
+            }
+            
+            # Apply mapping only where strictly necessary to avoid performance hit on large data
+            # strict=False means keep original if not found in map (good for safety)
+            data_clean['class'] = data_clean['class'].replace(class_map)
+            
+            print("   Normalized class names to: STAR, GALAXY, QSO")
+
         initial_shape = data_clean.shape
         
         # Remove duplicates
@@ -107,6 +126,10 @@ class AstronomicalDataProcessor:
         missing_threshold = 0.5  # Remove columns with >50% missing values
         missing_ratio = data_clean.isnull().sum() / len(data_clean)
         cols_to_drop = missing_ratio[missing_ratio > missing_threshold].index.tolist()
+        
+        # PROTECT CRITICAL COLUMNS from being dropped
+        critical_cols = ['u', 'g', 'r', 'i', 'z', 'ra', 'dec', 'redshift', 'class', 'target']
+        cols_to_drop = [c for c in cols_to_drop if c not in critical_cols]
         
         if cols_to_drop:
             data_clean = data_clean.drop(columns=cols_to_drop)

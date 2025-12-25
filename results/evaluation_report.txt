@@ -1,150 +1,150 @@
 ASTRONOMICAL OBJECT CLASSIFICATION - EVALUATION REPORT
 ======================================================================
 
-Report generated: 2025-12-09 13:46:25.925758
+Report generated: 2025-12-25 13:29:55.170673
 
 MODEL PERFORMANCE SUMMARY
 ------------------------------
               Model  Accuracy  Precision  Recall  F1-Score  ROC-AUC
-      random_forest    0.9931     0.9931  0.9931    0.9918   0.9982
-           lightgbm    0.9924     0.9918  0.9924    0.9920   0.9989
-            xgboost    0.9912     0.9906  0.9912    0.9907   0.9986
-        pytorch_mlp    0.9912     0.9910  0.9912    0.9910   0.9979
-logistic_regression    0.9905     0.9900  0.9905    0.9897   0.9975
-  gradient_boosting    0.9887     0.9874  0.9887    0.9880   0.9960
+           lightgbm    0.9920     0.9915  0.9920    0.9916   0.9990
+            xgboost    0.9917     0.9912  0.9917    0.9913   0.9990
+      random_forest    0.9911     0.9904  0.9911    0.9905   0.9976
+        pytorch_mlp    0.9904     0.9899  0.9904    0.9900   0.9978
+  gradient_boosting    0.9901     0.9893  0.9901    0.9895   0.9988
+logistic_regression    0.9895     0.9889  0.9895    0.9889   0.9964
            dense_nn    0.0000     0.0000  0.0000    0.0000   0.0000
           wide_deep    0.0000     0.0000  0.0000    0.0000   0.0000
             deep_nn    0.0000     0.0000  0.0000    0.0000   0.0000
 
-Best Performing Model: random_forest
-Best Accuracy: 0.9931
+Best Performing Model: lightgbm
+Best Accuracy: 0.9920
 
 DETAILED MODEL RESULTS
 -------------------------
 
 Model: logistic_regression
 ====================
-Accuracy: 0.9905
-Precision: 0.9900
-Recall: 0.9905
-F1-Score: 0.9897
-ROC-AUC: 0.9975
+Accuracy: 0.9895
+Precision: 0.9889
+Recall: 0.9895
+F1-Score: 0.9889
+ROC-AUC: 0.9964
 
 Classification Report:
               precision    recall  f1-score   support
 
-        STAR       0.99      0.99      0.99       928
-      GALAXY       0.83      0.42      0.56        12
-         QSO       0.99      1.00      0.99       646
+        STAR       0.99      0.99      0.99      6798
+      GALAXY       0.85      0.64      0.73       154
+         QSO       0.99      1.00      0.99      2528
 
-    accuracy                           0.99      1586
-   macro avg       0.94      0.80      0.85      1586
-weighted avg       0.99      0.99      0.99      1586
+    accuracy                           0.99      9480
+   macro avg       0.94      0.88      0.91      9480
+weighted avg       0.99      0.99      0.99      9480
 
 --------------------------------------------------
 
 Model: random_forest
 ====================
-Accuracy: 0.9931
-Precision: 0.9931
-Recall: 0.9931
-F1-Score: 0.9918
-ROC-AUC: 0.9982
+Accuracy: 0.9911
+Precision: 0.9904
+Recall: 0.9911
+F1-Score: 0.9905
+ROC-AUC: 0.9976
 
 Classification Report:
               precision    recall  f1-score   support
 
-        STAR       0.99      1.00      0.99       928
-      GALAXY       1.00      0.33      0.50        12
-         QSO       1.00      1.00      1.00       646
+        STAR       0.99      1.00      0.99      6798
+      GALAXY       0.81      0.60      0.69       154
+         QSO       1.00      1.00      1.00      2528
 
-    accuracy                           0.99      1586
-   macro avg       1.00      0.78      0.83      1586
-weighted avg       0.99      0.99      0.99      1586
+    accuracy                           0.99      9480
+   macro avg       0.93      0.86      0.89      9480
+weighted avg       0.99      0.99      0.99      9480
 
 --------------------------------------------------
 
 Model: xgboost
 ====================
-Accuracy: 0.9912
-Precision: 0.9906
-Recall: 0.9912
-F1-Score: 0.9907
-ROC-AUC: 0.9986
+Accuracy: 0.9917
+Precision: 0.9912
+Recall: 0.9917
+F1-Score: 0.9913
+ROC-AUC: 0.9990
 
 Classification Report:
               precision    recall  f1-score   support
 
-        STAR       0.99      1.00      0.99       928
-      GALAXY       0.75      0.50      0.60        12
-         QSO       1.00      0.99      0.99       646
+        STAR       0.99      1.00      0.99      6798
+      GALAXY       0.85      0.68      0.76       154
+         QSO       1.00      1.00      1.00      2528
 
-    accuracy                           0.99      1586
-   macro avg       0.91      0.83      0.86      1586
-weighted avg       0.99      0.99      0.99      1586
+    accuracy                           0.99      9480
+   macro avg       0.95      0.89      0.92      9480
+weighted avg       0.99      0.99      0.99      9480
 
 --------------------------------------------------
 
 Model: lightgbm
 ====================
-Accuracy: 0.9924
-Precision: 0.9918
-Recall: 0.9924
-F1-Score: 0.9920
-ROC-AUC: 0.9989
+Accuracy: 0.9920
+Precision: 0.9915
+Recall: 0.9920
+F1-Score: 0.9916
+ROC-AUC: 0.9990
 
 Classification Report:
               precision    recall  f1-score   support
 
-        STAR       0.99      1.00      0.99       928
-      GALAXY       0.67      0.50      0.57        12
-         QSO       1.00      1.00      1.00       646
+        STAR       0.99      1.00      0.99      6798
+      GALAXY       0.84      0.67      0.75       154
+         QSO       1.00      1.00      1.00      2528
 
-    accuracy                           0.99      1586
-   macro avg       0.89      0.83      0.85      1586
-weighted avg       0.99      0.99      0.99      1586
+    accuracy                           0.99      9480
+   macro avg       0.94      0.89      0.91      9480
+weighted avg       0.99      0.99      0.99      9480
 
 --------------------------------------------------
 
 Model: gradient_boosting
 ====================
-Accuracy: 0.9887
-Precision: 0.9874
-Recall: 0.9887
-F1-Score: 0.9880
-ROC-AUC: 0.9960
+Accuracy: 0.9901
+Precision: 0.9893
+Recall: 0.9901
+F1-Score: 0.9895
+ROC-AUC: 0.9988
 
 Classification Report:
               precision    recall  f1-score   support
 
-        STAR       0.99      0.99      0.99       928
-      GALAXY       0.33      0.25      0.29        12
-         QSO       1.00      1.00      1.00       646
+        STAR       0.99      1.00      0.99      6798
+      GALAXY       0.76      0.59      0.67       154
+         QSO       1.00      1.00      1.00      2528
 
-    accuracy                           0.99      1586
-   macro avg       0.77      0.75      0.76      1586
-weighted avg       0.99      0.99      0.99      1586
+    accuracy                           0.99      9480
+   macro avg       0.92      0.86      0.89      9480
+weighted avg       0.99      0.99      0.99      9480
 
 --------------------------------------------------
 
 Model: pytorch_mlp
 ====================
-Accuracy: 0.9912
-Precision: 0.9910
-Recall: 0.9912
-F1-Score: 0.9910
-ROC-AUC: 0.9979
+Accuracy: 0.9904
+Precision: 0.9899
+Recall: 0.9904
+F1-Score: 0.9900
+ROC-AUC: 0.9978
 
 Classification Report:
               precision    recall  f1-score   support
 
-        STAR       0.99      0.99      0.99       928
-      GALAXY       0.64      0.58      0.61        12
-         QSO       0.99      1.00      1.00       646
+        STAR       0.99      0.99      0.99      6798
+      GALAXY       0.84      0.67      0.75       154
+         QSO       0.99      1.00      1.00      2528
 
-    accuracy                           0.99      1586
-   macro avg       0.87      0.86      0.87      1586
-weighted avg       0.99      0.99      0.99      1586
+    accuracy                           0.99      9480
+   macro avg       0.94      0.89      0.91      9480
+weighted avg       0.99      0.99      0.99      9480
 
 --------------------------------------------------
 
@@ -153,27 +153,27 @@ weighted avg       0.99      0.99      0.99      1586
 ============================================================
 IMAGE ANALYSIS EVALUATION
 ============================================================
-Date: 2025-12-09 13:46:32.346532
+Date: 2025-12-25 13:30:02.935791
 Total Images: 120
 Classes: STAR, GALAXY, QSO
 
 ## Model Performance (Test Set)
               precision    recall  f1-score   support
 
-        STAR       0.86      0.75      0.80         8
+        STAR       0.71      0.62      0.67         8
       GALAXY       0.88      0.88      0.88         8
-         QSO       0.78      0.88      0.82         8
+         QSO       0.67      0.75      0.71         8
 
-    accuracy                           0.83        24
-   macro avg       0.84      0.83      0.83        24
-weighted avg       0.84      0.83      0.83        24
+    accuracy                           0.75        24
+   macro avg       0.75      0.75      0.75        24
+weighted avg       0.75      0.75      0.75        24
 
 
 ## Confusion Matrix
-[[6 1 1]
+[[5 1 2]
  [0 7 1]
- [1 0 7]]
+ [2 0 6]]
 
 ## Training History
-Final Accuracy: 0.8372
-Final Loss: 0.3564
+Final Accuracy: 0.8837
+Final Loss: 0.3248
